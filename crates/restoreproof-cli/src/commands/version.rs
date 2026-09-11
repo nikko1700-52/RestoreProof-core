@@ -27,7 +27,10 @@ pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
             });
             format!("{document:#}\n")
         }
-        OutputFormat::Terminal | OutputFormat::Markdown => {
+        OutputFormat::Terminal
+        | OutputFormat::Markdown
+        | OutputFormat::Junit
+        | OutputFormat::Prometheus => {
             let mut text = format!(
                 "\nRestoreProof Core {}\n  build      {}\n  platform   {}\n  edition    open source (Apache-2.0)\n\nExit codes\n",
                 tool.version,

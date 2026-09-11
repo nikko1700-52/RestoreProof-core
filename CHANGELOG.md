@@ -29,7 +29,11 @@ not a replacement for a backup platform.
 * `restoreproof check` — run only the checks, against an environment that is
   already running
 * `restoreproof report` — display a report, and `--verify` its integrity digest
+* `restoreproof diff` — compare two reports and exit non-zero on a regression
+* `restoreproof completions` — bash, zsh, fish, PowerShell, elvish
 * `restoreproof version` — version, build, platform and the exit-code table
+* `validate --strict` — treat warnings as errors, for a CI gate
+* `--log-format json` — one JSON object per line, for a log shipper
 * global options: `--config`, `--format`, `--output`, `--verbose`, `--quiet`,
   `--keep-environment`, `--no-cleanup`, `--timeout`, `--dry-run`, `--no-color`
 * documented exit codes 0–7, treated as a stable contract
@@ -56,7 +60,8 @@ not a replacement for a backup platform.
 * measured RTO and estimated RPO, compared against configured objectives
 * `RTO_UNKNOWN` / `RPO_UNKNOWN` when a value cannot be determined — never
   guessed
-* JSON, Markdown and terminal reports
+* JSON, Markdown, terminal, JUnit XML and Prometheus reports
+* reports written atomically, so a collector never reads a half-written file
 * SHA-256 integrity digest over the canonical JSON, verifiable with
   `report --verify`
 * reports written `0600` inside a `0700` directory
@@ -78,8 +83,10 @@ not a replacement for a backup platform.
   `0.0.0.0` port publishing are refused
 * secrets from files or environment variables only, never from YAML; never on a
   command line; redacted from every log, message and report
-* guaranteed teardown of the recovery environment on every path, including
-  panics and timeouts
+* guaranteed teardown of the recovery environment on every path: the normal
+  one, `SIGINT`/`SIGTERM`, panics and timeouts. Teardown addresses the Compose
+  project by name and never re-reads the Compose file, so it cannot fail because
+  the file needs an environment that no longer exists
 * `unsafe` forbidden workspace-wide; `unwrap`/`expect`/`panic` denied in library
   code
 

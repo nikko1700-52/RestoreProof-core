@@ -13,6 +13,10 @@ pub enum Format {
     Json,
     /// Human-readable.
     Markdown,
+    /// `JUnit` XML, for a CI system's test reporter.
+    Junit,
+    /// Prometheus text format, for the `node_exporter` textfile collector.
+    Prometheus,
 }
 
 impl Format {
@@ -22,6 +26,8 @@ impl Format {
         match self {
             Self::Json => "json",
             Self::Markdown => "md",
+            Self::Junit => "junit.xml",
+            Self::Prometheus => "prom",
         }
     }
 }
@@ -38,6 +44,8 @@ pub fn render(report: &Report, format: Format) -> Result<String> {
             serde_json::to_string_pretty(report).map_err(ReportError::Encode)?
         )),
         Format::Markdown => Ok(crate::markdown::render(report)),
+        Format::Junit => Ok(crate::junit::render(report)),
+        Format::Prometheus => Ok(crate::prometheus::render(report)),
     }
 }
 
@@ -58,11 +66,7 @@ pub fn write_all(report: &Report, directory: &Path, formats: &[Format]) -> Resul
     for format in formats {
         let path = directory.join(format!("{stem}.{}", format.extension()));
         let contents = render(report, *format)?;
-        std::fs::write(&path, contents).map_err(|source| ReportError::Io {
-            path: path.clone(),
-            source,
-        })?;
-        restrict_file(&path);
+        write_atomically(&path, &contents)?;
         written.push(path);
     }
     Ok(written)
@@ -88,6 +92,46 @@ fn file_stem(report: &Report) -> String {
         report.run.started_at.format("%Y%m%dT%H%M%SZ"),
         project
     )
+}
+
+/// Write a file so that a reader never sees a half-written report.
+///
+/// The content goes to a temporary file in the same directory, is flushed and
+/// synced, and is then renamed into place — `rename(2)` is atomic within a
+/// filesystem. This matters because a Prometheus textfile collector or a CI
+/// artefact step can read the directory at any moment, including while a drill
+/// is still writing, and a truncated report is worse than a missing one.
+fn write_atomically(path: &Path, contents: &str) -> Result<()> {
+    use std::io::Write as _;
+
+    let temporary = path.with_extension(format!(
+        "{}.tmp",
+        path.extension().unwrap_or_default().to_string_lossy()
+    ));
+
+    {
+        let mut file = std::fs::File::create(&temporary).map_err(|source| ReportError::Io {
+            path: temporary.clone(),
+            source,
+        })?;
+        restrict_file(&temporary);
+        file.write_all(contents.as_bytes())
+            .and_then(|()| file.sync_all())
+            .map_err(|source| ReportError::Io {
+                path: temporary.clone(),
+                source,
+            })?;
+    }
+
+    std::fs::rename(&temporary, path).map_err(|source| {
+        let _ = std::fs::remove_file(&temporary);
+        ReportError::Io {
+            path: path.to_path_buf(),
+            source,
+        }
+    })?;
+    restrict_file(path);
+    Ok(())
 }
 
 fn create_private_dir(directory: &Path) -> Result<()> {
@@ -184,6 +228,57 @@ mod tests {
                 "the report directory must not be readable by others"
             );
         }
+    }
+
+    #[test]
+    fn every_format_is_written_and_named_distinctly() {
+        let dir = TempDir::new().unwrap();
+        let written = write_all(
+            &sample_report(),
+            dir.path(),
+            &[
+                Format::Json,
+                Format::Markdown,
+                Format::Junit,
+                Format::Prometheus,
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(written.len(), 4);
+        let names: Vec<String> = written
+            .iter()
+            .filter_map(|path| {
+                path.file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+            })
+            .collect();
+        assert!(
+            names.iter().any(|name| name.ends_with(".junit.xml")),
+            "{names:?}"
+        );
+        assert!(
+            names.iter().any(|name| name.ends_with(".prom")),
+            "{names:?}"
+        );
+
+        // No temporary file may survive an atomic write.
+        let leftovers: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".tmp"))
+            .collect();
+        assert!(leftovers.is_empty(), "a temporary file was left behind");
+    }
+
+    #[test]
+    fn writing_twice_replaces_the_report_cleanly() {
+        let dir = TempDir::new().unwrap();
+        let report = sample_report();
+        write_all(&report, dir.path(), &[Format::Json]).unwrap();
+        let written = write_all(&report, dir.path(), &[Format::Json]).unwrap();
+        let reloaded = load(&written[0]).unwrap();
+        assert_eq!(reloaded, report);
     }
 
     #[test]

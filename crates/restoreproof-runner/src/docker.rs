@@ -18,7 +18,7 @@
 //!   cannot redirect a drill at another Docker daemon.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use restoreproof_core::CommandSpec;
@@ -301,28 +301,71 @@ fn parse_services(stdout: &str) -> Result<Vec<ComposeService>> {
     Ok(services)
 }
 
-/// Tear down a project without an async runtime, used by the cleanup guard.
-pub(crate) fn blocking_teardown(
-    compose_file: &Path,
-    project_directory: &Path,
-    project: &str,
-) -> bool {
+/// Arguments that destroy a Compose project, addressed by name alone.
+///
+/// Teardown deliberately does **not** pass `--file`. `docker compose down`
+/// re-reads and interpolates the Compose file, so a file referring to
+/// `${RESTOREPROOF_RESTORE_DIR}` fails to parse unless that variable is set
+/// again — and a teardown that depends on reconstructing the environment it is
+/// tearing down is a teardown that fails exactly when it is needed most.
+///
+/// Compose v2 resolves a project from the labels on its containers, so the
+/// project name is sufficient and nothing on disk has to still be valid.
+fn down_arguments(project: &str) -> [&str; 8] {
+    [
+        "compose",
+        "--project-name",
+        project,
+        "down",
+        "--volumes",
+        "--remove-orphans",
+        "--timeout",
+        "30",
+    ]
+}
+
+/// Destroy a Compose project from inside an async runtime.
+///
+/// Preferred over [`blocking_teardown`] wherever a runtime exists. Waiting on a
+/// child through `std::process` while Tokio's process driver is reaping
+/// children can fail with `ECHILD`, and a teardown whose completion cannot be
+/// observed is one the caller may abandon half-done — which in practice leaves
+/// the containers behind.
+///
+/// # Errors
+///
+/// Returns the reason the project could not be destroyed, so the operator can
+/// be told what is still running on their machine and why.
+pub async fn compose_down(project: &str) -> std::result::Result<(), String> {
+    let mut spec = CommandSpec::new("docker")
+        .args(down_arguments(project))
+        .timeout(Duration::from_secs(180));
+
+    for key in FORWARDED_DOCKER_ENV {
+        if let Some(value) = std::env::var_os(key) {
+            spec = spec.env(key, value);
+        }
+    }
+
+    match spec.run().await {
+        Ok(output) if output.is_success() => Ok(()),
+        Ok(output) => Err(format!(
+            "`docker compose down` exited with {}: {}",
+            output.describe_status(),
+            output.stderr_tail(5).trim()
+        )),
+        Err(err) => Err(err.to_string()),
+    }
+}
+
+/// Destroy a Compose project without an async runtime.
+///
+/// The last-resort path, used from `Drop`. Prefer [`compose_down`].
+#[must_use]
+pub fn blocking_teardown(project: &str) -> bool {
     let mut command = std::process::Command::new("docker");
     command
-        .args([
-            "compose",
-            "--file",
-            &compose_file.display().to_string(),
-            "--project-directory",
-            &project_directory.display().to_string(),
-            "--project-name",
-            project,
-            "down",
-            "--volumes",
-            "--remove-orphans",
-            "--timeout",
-            "30",
-        ])
+        .args(down_arguments(project))
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
@@ -339,6 +382,19 @@ pub(crate) fn blocking_teardown(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn teardown_addresses_the_project_by_name_and_reads_no_file() {
+        let arguments = down_arguments("example-rp-abcd1234");
+        assert!(
+            !arguments.contains(&"--file"),
+            "teardown must not re-parse the Compose file: {arguments:?}"
+        );
+        assert!(arguments.contains(&"--project-name"));
+        assert!(arguments.contains(&"example-rp-abcd1234"));
+        assert!(arguments.contains(&"--volumes"));
+        assert!(arguments.contains(&"--remove-orphans"));
+    }
 
     #[test]
     fn newline_delimited_output_is_parsed() {

@@ -161,10 +161,24 @@ symlink cannot be used to read `/etc/shadow` into a report.
 
 ### Cleanup is guaranteed
 
-The recovery environment is destroyed on every path: the normal one, an early
-return, a panic, and a timeout — the last two through a `Drop` guard that tears
-the Compose project down synchronously. The project name is unique per run, so a
-leftover environment can always be found and removed by hand.
+The recovery environment is destroyed on every path:
+
+1. the normal path, reached on success, on a failed restore, on a failed start
+   and on a timeout alike, because the caller runs teardown unconditionally;
+2. **on `SIGINT` and `SIGTERM`** — `Ctrl-C` and a cancelled CI job both kill the
+   process outright, so the signal is caught and every live environment is
+   destroyed *before* exiting. Anything that could not be destroyed is named,
+   with the command to finish the job;
+3. a `Drop` guard, for a panic;
+4. the project name is unique per run, so a leftover environment can always be
+   found and removed by hand.
+
+Teardown addresses the Compose project **by name** and never re-reads the
+Compose file. This matters more than it sounds: `docker compose down` normally
+re-parses and interpolates the file, so a file referring to
+`${RESTOREPROOF_RESTORE_DIR}` fails to parse unless that variable is
+reconstructed — and a cleanup path that depends on reconstructing the
+environment it is tearing down fails exactly when it is needed most.
 
 The workspace holding restored data is created with mode `0700` and removed with
 the environment. Only `--keep-environment` disables this, and the CLI warns

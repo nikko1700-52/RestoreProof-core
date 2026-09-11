@@ -162,6 +162,23 @@ chmod 755 drill/verify-invariants.sh
 
 A world-writable script means any local user can change what your drill runs.
 
+## I pressed Ctrl-C — did it leave anything behind?
+
+No. `SIGINT` and `SIGTERM` are caught, the environment is destroyed, and the
+process then exits with 130 or 143. You will see:
+
+```
+interrupted: destroying 1 recovery environment(s) before exiting. Do not kill
+this process again — restored data would be left behind.
+interrupted: recovery environments destroyed.
+```
+
+Do not send a second signal while that message is on screen: the first one is
+already cleaning up, and the second would kill the process mid-teardown.
+
+If something still could not be destroyed, it is named with the exact command to
+remove it.
+
 ## A leftover environment
 
 Cleanup runs on every path, including panics and timeouts, unless you passed

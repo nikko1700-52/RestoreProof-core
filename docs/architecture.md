@@ -145,11 +145,24 @@ mistake that for success and then produce a confusing series of
 connection-refused check failures. Two polls, one second apart, cost a second
 and remove the race.
 
-### Cleanup is a `Drop` guard, synchronously
+### Cleanup has four paths, and `Drop` is the last of them
 
-`Drop` cannot await. Tearing the Compose project down with a blocking call in
-`Drop` is a deliberate trade: blocking briefly is better than leaving a
-container holding a copy of production data behind.
+Teardown runs unconditionally on the async path, so success, a failed restore, a
+failed start and a timeout all reach it. Signals are caught separately, because
+they kill the process rather than unwinding it. `Drop` remains only for panics.
+
+That ordering is not decoration. A blocking `std::process` wait inside the Tokio
+runtime can fail with `ECHILD` while the runtime reaps children, so a teardown
+started from `Drop` cannot be reliably observed — and a teardown that is started
+but not waited for is one the process abandons half-done when it exits.
+
+### Teardown never re-reads the Compose file
+
+`docker compose down` normally re-parses and interpolates the Compose file. A
+file mounting `${RESTOREPROOF_RESTORE_DIR}` therefore fails to parse unless that
+variable is set again, which made cleanup fail precisely for the realistic
+scenarios. Teardown addresses the project by name instead; Compose resolves it
+from container labels, and nothing on disk has to still be valid.
 
 ### Adjacent YAML tagging, deserialized by hand
 
@@ -191,6 +204,13 @@ dispatch in `restoreproof_checks::executor`.
 Implement `EnvironmentProbe` and provide a `CheckContext`. The check executors
 do not know or care what is behind it.
 
+### A new report format
+
+Add a variant to `restoreproof_report::writer::Format` and
+`restoreproof_config::model::ReportFormat`, and one arm to
+`restoreproof_report::writer::render`. `junit` and `prometheus` were added that
+way and touched nothing else.
+
 ### A different front-end
 
 Depend on `restoreproof-runner` and call
@@ -208,6 +228,7 @@ whole API surface a scheduler or an HTTP service needs.
 6. The recovery environment is destroyed on every path except
    `--keep-environment`.
 7. Exit codes do not change meaning.
+8. An interrupted drill leaves nothing running.
 
 Each of these has a test. Adding a feature that breaks one is a design
 discussion, not a patch.

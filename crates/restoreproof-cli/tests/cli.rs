@@ -437,3 +437,244 @@ fn a_secret_from_the_environment_never_reaches_a_report() {
         );
     }
 }
+
+// --- report formats ------------------------------------------------------
+
+#[test]
+fn junit_output_is_well_formed_and_names_every_check() {
+    let fixture = Fixture::valid();
+    cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+            "--format",
+            "junit",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("<?xml version=\"1.0\""))
+        .stdout(predicate::str::contains("<testsuites "))
+        .stdout(predicate::str::contains("</testsuites>"));
+}
+
+#[test]
+fn prometheus_output_is_scrapeable() {
+    let fixture = Fixture::valid();
+    let assertion = cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+            "--format",
+            "prometheus",
+        ])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&assertion.get_output().stdout).into_owned();
+    assert!(stdout.contains("# HELP restoreproof_drill_success"));
+    assert!(stdout.contains("# TYPE restoreproof_drill_success gauge"));
+    assert!(stdout.contains("restoreproof_drill_completed_timestamp_seconds"));
+
+    // Every sample line must parse as `name{labels} value`.
+    for line in stdout
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+    {
+        assert!(
+            line.contains('{') && line.contains("} "),
+            "unparseable sample line: {line}"
+        );
+    }
+}
+
+#[test]
+fn every_configured_format_is_written_to_the_report_directory() {
+    let fixture = Fixture::valid();
+    fixture.write(
+        "restoreproof.yaml",
+        &CONFIG.replace(
+            "  formats:\n    - json\n    - markdown",
+            "  formats:\n    - json\n    - markdown\n    - junit\n    - prometheus",
+        ),
+    );
+
+    cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+        ])
+        .assert()
+        .success();
+
+    let names: Vec<String> = std::fs::read_dir(fixture.path("reports"))
+        .unwrap()
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+
+    assert_eq!(names.len(), 4, "{names:?}");
+    for suffix in [".json", ".md", ".junit.xml", ".prom"] {
+        assert!(
+            names.iter().any(|name| name.ends_with(suffix)),
+            "missing {suffix}: {names:?}"
+        );
+    }
+}
+
+// --- diff ----------------------------------------------------------------
+
+#[test]
+fn diff_reports_no_regression_between_identical_reports() {
+    let fixture = Fixture::valid();
+    cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+        ])
+        .assert()
+        .success();
+
+    let report = std::fs::read_dir(fixture.path("reports"))
+        .unwrap()
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .expect("a JSON report");
+
+    cli()
+        .args(["diff", report.to_str().unwrap(), report.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No regression"));
+}
+
+#[test]
+fn diff_exits_nonzero_when_a_check_stops_passing() {
+    let fixture = Fixture::valid();
+    cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+        ])
+        .assert()
+        .success();
+
+    let before = std::fs::read_dir(fixture.path("reports"))
+        .unwrap()
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .expect("a JSON report");
+
+    // Build a "later" report in which a check that used to pass now fails.
+    let mut document: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&before).unwrap()).unwrap();
+    document["run"]["status"] = serde_json::Value::String("PASSED".to_owned());
+    document["checks"] = serde_json::json!([{
+        "id": "dump-restored",
+        "name": "The dump was restored",
+        "kind": "file",
+        "required": true,
+        "status": "PASSED",
+        "started_at": document["run"]["started_at"],
+        "duration_seconds": 0.1,
+        "message": "present",
+        "attempts": 1
+    }]);
+    let good = fixture.path("reports/good.json");
+    std::fs::write(&good, document.to_string()).unwrap();
+
+    document["checks"][0]["status"] = serde_json::Value::String("FAILED".to_owned());
+    document["run"]["status"] = serde_json::Value::String("FAILED".to_owned());
+    let bad = fixture.path("reports/bad.json");
+    std::fs::write(&bad, document.to_string()).unwrap();
+
+    cli()
+        .args(["diff", good.to_str().unwrap(), bad.to_str().unwrap()])
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("Recovery got worse"));
+}
+
+#[test]
+fn diff_rejects_a_file_that_is_not_a_report() {
+    let fixture = Fixture::valid();
+    let path = fixture.write("not-a-report.json", "{}");
+    cli()
+        .args(["diff", path.to_str().unwrap(), path.to_str().unwrap()])
+        .assert()
+        .code(7);
+}
+
+// --- strict validation and completions -----------------------------------
+
+#[test]
+fn strict_validation_turns_warnings_into_a_failure() {
+    let fixture = Fixture::valid();
+    // The fixture has no metrics targets, which produces warnings.
+    cli()
+        .args(["validate", "--config", fixture.config().to_str().unwrap()])
+        .assert()
+        .success();
+
+    cli()
+        .args([
+            "validate",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--strict",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("--strict"));
+}
+
+#[test]
+fn completions_are_generated_for_every_supported_shell() {
+    for shell in ["bash", "zsh", "fish", "powershell", "elvish"] {
+        cli()
+            .args(["completions", shell])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("restoreproof"));
+    }
+}
+
+#[test]
+fn json_logging_emits_one_object_per_line() {
+    let fixture = Fixture::valid();
+    let assertion = cli()
+        .args([
+            "run",
+            "--config",
+            fixture.config().to_str().unwrap(),
+            "--dry-run",
+            "--log-format",
+            "json",
+            "-vv",
+        ])
+        .assert()
+        .success();
+
+    let stderr = String::from_utf8_lossy(&assertion.get_output().stderr).into_owned();
+    for line in stderr.lines().filter(|line| line.starts_with('{')) {
+        serde_json::from_str::<serde_json::Value>(line)
+            .unwrap_or_else(|err| panic!("log line is not JSON ({err}): {line}"));
+    }
+}

@@ -6,6 +6,10 @@
 //!   the only form `restoreproof report --verify` can check.
 //! * **Markdown** — written to be pasted into a ticket or handed to an auditor.
 //! * **Terminal** — a compact summary for the person running the drill.
+//! * **`JUnit` XML** — so a drill appears in a CI pipeline's test report next to
+//!   everything else that ran.
+//! * **Prometheus text** — so a scheduled drill can be alerted on, with no
+//!   server and no data leaving the machine.
 //!
 //! Reports are written with restrictive permissions (`0600` files in a `0700`
 //! directory on Unix): a drill report describes the contents of a production
@@ -20,14 +24,18 @@
     )
 )]
 
+pub mod diff;
 pub mod error;
 pub mod format;
+pub mod junit;
 pub mod markdown;
+pub mod prometheus;
 pub mod terminal;
 pub mod writer;
 
 #[cfg(test)]
 mod test_support;
 
+pub use diff::{ReportDiff, compare};
 pub use error::{ReportError, Result};
 pub use writer::{Format, load, render, write_all};

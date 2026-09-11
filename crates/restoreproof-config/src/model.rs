@@ -266,10 +266,14 @@ pub struct MetricsSpec {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ReportFormat {
-    /// Machine-readable report.
+    /// Machine-readable report. Canonical: the integrity digest covers it.
     Json,
     /// Human-readable report, suitable for a ticket.
     Markdown,
+    /// `JUnit` XML, understood by every CI system's test reporter.
+    Junit,
+    /// Prometheus text format, for the `node_exporter` textfile collector.
+    Prometheus,
 }
 
 impl ReportFormat {
@@ -279,6 +283,8 @@ impl ReportFormat {
         match self {
             Self::Json => "json",
             Self::Markdown => "md",
+            Self::Junit => "junit.xml",
+            Self::Prometheus => "prom",
         }
     }
 }

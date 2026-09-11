@@ -167,6 +167,17 @@ a breach.
    copy of personal data is still personal data: the same retention, access and
    record-keeping duties apply. Automatic masking is not part of this edition.
 
+## Interrupting a drill
+
+`Ctrl-C` and a cancelled CI job are handled: the signal is caught, every live
+recovery environment is destroyed, and only then does the process exit (130 for
+`SIGINT`, 143 for `SIGTERM`). If anything could not be destroyed, it is named
+along with the command to remove it.
+
+Do not send a second signal while that is happening — the message says so. The
+first one is already destroying the environment; the second kills the process
+mid-teardown and leaves restored data behind.
+
 ## If cleanup fails
 
 The project name is unique per run and printed in the report:

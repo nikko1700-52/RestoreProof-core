@@ -76,6 +76,8 @@ pub fn run(global: &GlobalArgs, out: &Output, file: &Path, verify: bool) -> Exit
             restoreproof_report::terminal::render(&report, Style::new(out.color()))
         }
         OutputFormat::Markdown => restoreproof_report::markdown::render(&report),
+        OutputFormat::Junit => restoreproof_report::junit::render(&report),
+        OutputFormat::Prometheus => restoreproof_report::prometheus::render(&report),
         OutputFormat::Json => {
             match restoreproof_report::render(&report, restoreproof_report::Format::Json) {
                 Ok(text) => text,

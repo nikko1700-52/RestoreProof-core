@@ -212,9 +212,34 @@ Path to `checks.yaml`. Must be inside the project directory. Defaults to
 | Field | Type | Default |
 |---|---|---|
 | `directory` | path | `./reports` |
-| `formats` | list of `json`, `markdown` | both |
+| `formats` | list | `[json, markdown]` |
+
+Available formats:
+
+| Format | File | For |
+|---|---|---|
+| `json` | `.json` | the canonical record. The integrity digest covers this one, and it is the only format `report --verify` and `diff` can read. |
+| `markdown` | `.md` | pasting into a ticket. |
+| `junit` | `.junit.xml` | your CI's test reporter. Each check becomes a test case; optional checks map to `skipped` so they never turn a pipeline red. |
+| `prometheus` | `.prom` | the `node_exporter` textfile collector. Point `directory` at the collector's directory and a scheduled drill becomes something you can alert on. |
+
+```yaml
+report:
+  directory: ./reports
+  formats:
+    - json
+    - markdown
+    - junit
+    - prometheus
+```
 
 The directory is created if missing, with mode `0700`; report files are `0600`.
+Each file is written to a temporary name and renamed into place, so a collector
+or an artefact step never reads a half-written report.
+
+Values that cannot be determined are **omitted** from the Prometheus output
+rather than written as zero: a missing series is visibly missing, whereas
+`restoreproof_rpo_seconds 0` would read as "no data loss".
 
 ### `security`
 

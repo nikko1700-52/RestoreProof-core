@@ -64,6 +64,8 @@ pub async fn run(
             }
         }
         OutputFormat::Markdown => restoreproof_report::markdown::render(&outcome.report),
+        OutputFormat::Junit => restoreproof_report::junit::render(&outcome.report),
+        OutputFormat::Prometheus => restoreproof_report::prometheus::render(&outcome.report),
     };
 
     if out.emit(&rendered, global.output.as_deref()).is_err() {

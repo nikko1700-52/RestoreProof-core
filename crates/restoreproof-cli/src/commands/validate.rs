@@ -8,7 +8,9 @@ use crate::commands::report_config_error;
 use crate::output::Output;
 
 /// Validate the configuration and report every problem at once.
-pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
+///
+/// With `strict`, warnings also fail the command.
+pub fn run(global: &GlobalArgs, out: &Output, strict: bool) -> ExitCode {
     match Scenario::load(&global.config) {
         Ok(scenario) => {
             match global.format {
@@ -22,6 +24,7 @@ pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
                         "checks": scenario.checks.checks.len(),
                         "enabled_checks": scenario.enabled_checks().len(),
                         "warnings": scenario.warnings,
+                        "strict": strict,
                     });
                     if out
                         .emit(&format!("{document:#}\n"), global.output.as_deref())
@@ -30,7 +33,10 @@ pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
                         return ExitCode::Internal;
                     }
                 }
-                OutputFormat::Terminal | OutputFormat::Markdown => {
+                OutputFormat::Terminal
+                | OutputFormat::Markdown
+                | OutputFormat::Junit
+                | OutputFormat::Prometheus => {
                     out.line(&format!(
                         "\n  Configuration is valid: {}\n",
                         global.config.display()
@@ -59,6 +65,17 @@ pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
                     }
                     out.line("");
                 }
+            }
+
+            // `--strict` exists so a pipeline can refuse to merge a scenario
+            // that is valid but weaker than it looks: an approximated backup
+            // timestamp, an unpinned image, no required check.
+            if strict && !scenario.warnings.is_empty() {
+                out.error(&format!(
+                    "{} warning(s) and --strict was given",
+                    scenario.warnings.len()
+                ));
+                return ExitCode::InvalidConfig;
             }
             ExitCode::Success
         }

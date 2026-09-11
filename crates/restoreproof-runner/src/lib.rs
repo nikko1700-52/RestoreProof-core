@@ -27,6 +27,7 @@
     )
 )]
 
+pub mod cleanup;
 pub mod docker;
 pub mod environment;
 pub mod error;
@@ -34,6 +35,7 @@ pub mod plan;
 pub mod runner;
 pub mod workspace;
 
+pub use cleanup::{ActiveEnvironment, teardown_all, teardown_all_blocking};
 pub use docker::{DockerCli, DockerInfo};
 pub use environment::RecoveryEnvironment;
 pub use error::{Result, RunnerError};

@@ -1,6 +1,8 @@
 //! Subcommand implementations.
 
 pub mod check;
+pub mod completions;
+pub mod diff;
 pub mod init;
 pub mod plan;
 pub mod report;

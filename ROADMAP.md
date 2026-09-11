@@ -15,7 +15,10 @@ Shipped:
 * checks: `file`, `container`, `http`, `sql`, `command`, `script`
 * Docker Compose recovery environments with guaranteed cleanup
 * measured RTO, estimated RPO, `UNKNOWN` when it cannot be determined
-* JSON, Markdown and terminal reports with integrity digests
+* JSON, Markdown, terminal, JUnit XML and Prometheus reports with integrity
+  digests
+* `restoreproof diff` for comparing two runs locally
+* cleanup that survives `Ctrl-C` and a cancelled CI job
 * the security model: path confinement, read-only SQL, Compose auditing, secret
   redaction, argument-injection refusal
 
@@ -38,11 +41,11 @@ Making the tool usable on real systems rather than examples.
   by executing the client inside the recovery network.
 * **Better failure output.** When a service fails to start, put the relevant
   container logs in the report rather than only the tail.
-* **`restoreproof diff <report-a> <report-b>`.** Comparing two runs locally: did
-  the recovery get slower, which check started failing. (Comparing *many* runs
-  over months is the commercial feature; comparing two files is not.)
 * **Partial restore support** for large backups — restore only what the checks
   need.
+* **Optional parallel check execution.** Checks run sequentially today, which is
+  predictable and easy to reason about. An opt-in `--jobs` would cut drill time
+  on scenarios with many independent checks.
 
 ## Later — 0.3 and beyond
 

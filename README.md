@@ -86,6 +86,41 @@ cargo run -- plan --config my-drill/restoreproof.yaml
 | `command` | Whatever your own tooling can assert. |
 | `script` | A script versioned in your project, passing or failing by exit code. |
 
+### Where the results go
+
+| Format | For |
+|---|---|
+| Terminal | the person running it |
+| JSON | the canonical record; the integrity digest covers it |
+| Markdown | pasting into a ticket or sending to a customer |
+| **JUnit XML** | your CI's test reporter — each check appears as a test case |
+| **Prometheus** | `node_exporter`'s textfile collector — alert on recovery |
+
+Monitoring a nightly drill takes no server and no account:
+
+```promql
+# Recovery is broken.
+restoreproof_drill_success == 0
+
+# No drill has run for a day. Silence is not success.
+time() - restoreproof_drill_completed_timestamp_seconds > 86400
+```
+
+And `restoreproof diff` answers the question a single report cannot:
+
+```console
+$ restoreproof diff reports/monday.json reports/tuesday.json
+
+  Status   PASSED → ERROR   WORSE
+
+  Checks
+    ! The orders table contains d… PASSED → ERROR
+
+  Recovery got worse between these two drills.
+```
+
+It exits `1` on a regression, so it works as a CI gate on its own.
+
 And it measures:
 
 * **RTO** — how long the recovery actually took, compared with your objective.
@@ -120,6 +155,7 @@ back:
 | Request forgery | HTTP checks target loopback only unless you opt in. Proxies are ignored, redirects re-validated. |
 | Container escape | The Compose file is audited before anything starts: privileged containers, the Docker socket, host namespaces, dangerous capabilities and host-path mounts are refused. |
 | Data exposure | Ports published on `0.0.0.0` are refused; loopback is fine. Reports are `0600`, restored data lives in a `0700` workspace. |
+| Leftovers after `Ctrl-C` | `SIGINT` and `SIGTERM` are caught: the environment is destroyed *before* the process exits, and anything that could not be destroyed is named. |
 | Secret leakage | Secrets come from files or environment variables, never from YAML. They never reach `argv`, a log, or a report. |
 | Leftover environments | Teardown runs on every path, including panics and timeouts. |
 
@@ -183,6 +219,7 @@ Worth knowing before you rely on it:
 * The Compose audit is **static**. It reasons about the Compose file, not about
   what your images do at runtime. It is a guardrail, not a container sandbox.
 * Report digests detect accidental modification. They are **not signatures**.
+* Checks run sequentially, one scenario at a time. Nothing is parallelised.
 * BorgBackup support is experimental, and the restic example is not exercised
   by CI (CI does not install restic).
 * Tested on Linux (Debian/Ubuntu). Other platforms are unverified.

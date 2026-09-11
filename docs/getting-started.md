@@ -155,19 +155,68 @@ restoreproof run      --config my-drill/restoreproof.yaml
 - name: Recovery drill
   env:
     DRILL_DATABASE_URL: ${{ secrets.DRILL_DATABASE_URL }}
-  run: |
-    restoreproof run --config drills/nightly/restoreproof.yaml \
-      --format markdown --output drill-report.md
+  run: restoreproof run --config drills/nightly/restoreproof.yaml
+
+- name: Publish the drill as a test report
+  if: always()
+  uses: mikepenz/action-junit-report@v4
+  with:
+    report_paths: drills/nightly/reports/*.junit.xml
 
 - uses: actions/upload-artifact@v4
   if: always()
   with:
     name: recovery-drill-report
-    path: drill-report.md
+    path: drills/nightly/reports/
 ```
+
+Add `junit` to `report.formats` and every check appears in the pipeline's test
+report, next to your unit tests, instead of being a wall of text in a log.
 
 A non-zero exit fails the job. Branch on the specific code when you want to
 treat "Docker is missing" (3) differently from "the recovery is broken" (1).
+
+Two more things worth wiring up:
+
+```bash
+# Refuse to merge a scenario that is valid but weaker than it looks:
+# an approximated backup timestamp, an unpinned image, no required check.
+restoreproof validate --config drills/nightly/restoreproof.yaml --strict
+
+# Fail the build if recovery got worse than the last known-good run.
+restoreproof diff drills/nightly/known-good.json drills/nightly/reports/latest.json
+```
+
+Interrupting the job is safe: `SIGINT` and `SIGTERM` are caught, and the
+recovery environment is destroyed before the process exits. A cancelled pipeline
+does not leave a copy of production data running on the runner.
+
+## Alerting on a scheduled drill
+
+No server, no account, no data leaving the machine — just the `node_exporter`
+textfile collector:
+
+```yaml
+report:
+  directory: /var/lib/node_exporter/textfile
+  formats:
+    - json
+    - prometheus
+```
+
+```promql
+# Recovery is broken.
+restoreproof_drill_success == 0
+
+# Nobody has drilled for a day. Silence is not success.
+time() - restoreproof_drill_completed_timestamp_seconds > 86400
+
+# The objective is no longer met.
+restoreproof_rto_seconds > restoreproof_rto_target_seconds
+```
+
+The second alert is the one people forget. A drill that silently stopped running
+looks exactly like a drill that keeps passing.
 
 ## Reading a report
 
@@ -186,3 +235,11 @@ recorded one. It detects accidental modification; it is not a signature.
 * [Check types](checks.md)
 * [Security](security.md)
 * [Troubleshooting](troubleshooting.md)
+
+## Shell completion
+
+```bash
+restoreproof completions bash | sudo tee /etc/bash_completion.d/restoreproof
+restoreproof completions zsh  > ~/.zfunc/_restoreproof
+restoreproof completions fish > ~/.config/fish/completions/restoreproof.fish
+```

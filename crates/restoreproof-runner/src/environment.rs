@@ -4,16 +4,21 @@
 //!
 //! A drill starts containers and volumes holding a copy of production data.
 //! Leaving them behind is both a disk leak and a data-exposure problem, so
-//! cleanup happens on three independent paths:
+//! cleanup happens on four independent paths:
 //!
-//! 1. the normal path calls [`RecoveryEnvironment::teardown`];
-//! 2. any early return unwinds through [`Drop`], which tears the project down
-//!    synchronously — this covers a failed restore, a panicking check and a
-//!    cancelled future alike;
-//! 3. the project name is unique per run, so a leftover environment can always
+//! 1. the normal path calls [`RecoveryEnvironment::teardown`] — reached on
+//!    success, on a failed restore, on a failed start and on a timeout alike,
+//!    because the caller runs it unconditionally;
+//! 2. a signal (`Ctrl-C`, a cancelled CI job) is caught, and everything in
+//!    [`crate::cleanup`] is destroyed before the process exits;
+//! 3. [`Drop`] destroys the project synchronously, for a panic;
+//! 4. the project name is unique per run, so a leftover environment can always
 //!    be found and removed with `docker compose -p <name> down -v`.
 //!
-//! Only `--keep-environment` disables all three, and the CLI warns when it does.
+//! Teardown addresses the project **by name only** and never re-reads the
+//! Compose file. See [`crate::docker::compose_down`] for why that matters.
+//!
+//! Only `--keep-environment` disables cleanup, and the CLI warns when it does.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -22,6 +27,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use restoreproof_checks::context::{EnvironmentProbe, ProbeError, ServiceObservation};
 
+use crate::cleanup::{register, unregister};
 use crate::docker::{ComposeService, DockerCli, blocking_teardown};
 use crate::error::{Result, RunnerError};
 
@@ -42,8 +48,6 @@ const REQUIRED_STABLE_POLLS: u32 = 2;
 #[derive(Debug)]
 pub struct RecoveryEnvironment {
     cli: DockerCli,
-    compose_file: PathBuf,
-    project_directory: PathBuf,
     cleanup: bool,
     started: bool,
     torn_down: bool,
@@ -75,12 +79,16 @@ impl RecoveryEnvironment {
 
         let mut environment = Self {
             cli,
-            compose_file,
-            project_directory,
             cleanup,
             started: true, // armed before `up`, so a partial start is still cleaned up
             torn_down: false,
         };
+
+        // Registered before `up`, so that a signal arriving while images are
+        // pulling still finds something to destroy.
+        if cleanup {
+            register(environment.cli.project_name());
+        }
 
         let started = environment
             .cli
@@ -126,14 +134,12 @@ impl RecoveryEnvironment {
     ) -> Self {
         Self {
             cli: DockerCli::new(
-                compose_file.clone(),
-                project_directory.clone(),
+                compose_file,
+                project_directory,
                 project_name,
                 environment,
                 max_output_bytes,
             ),
-            compose_file,
-            project_directory,
             cleanup: false,
             started: false,
             torn_down: true,
@@ -268,6 +274,7 @@ impl RecoveryEnvironment {
             return Ok(());
         }
         self.torn_down = true;
+        unregister(self.cli.project_name());
 
         if !self.cleanup {
             tracing::warn!(
@@ -278,25 +285,15 @@ impl RecoveryEnvironment {
             return Ok(());
         }
 
-        let output = self
-            .cli
-            .compose(
-                &["down", "--volumes", "--remove-orphans", "--timeout", "30"],
-                Duration::from_secs(180),
-            )
-            .await?;
-
-        if output.is_success() {
-            Ok(())
-        } else {
-            Err(RunnerError::Environment(format!(
-                "the recovery environment could not be destroyed ({}). Remove it manually with \
-                 `docker compose -p {} down -v`.\n{}",
-                output.describe_status(),
-                self.cli.project_name(),
-                output.stderr_tail(10)
-            )))
-        }
+        crate::docker::compose_down(self.cli.project_name())
+            .await
+            .map_err(|reason| {
+                RunnerError::Environment(format!(
+                    "the recovery environment could not be destroyed: {reason}\nRemove it by hand \
+                     with `docker compose -p {} down --volumes --remove-orphans`.",
+                    self.cli.project_name()
+                ))
+            })
     }
 
     /// Whether the environment was actually destroyed.
@@ -320,11 +317,7 @@ impl Drop for RecoveryEnvironment {
             project = self.cli.project_name(),
             "tearing down the recovery environment from the drop guard"
         );
-        if !blocking_teardown(
-            &self.compose_file,
-            &self.project_directory,
-            self.cli.project_name(),
-        ) {
+        if !blocking_teardown(self.cli.project_name()) {
             tracing::error!(
                 project = self.cli.project_name(),
                 "could not destroy the recovery environment; remove it with `docker compose -p {} down -v`",

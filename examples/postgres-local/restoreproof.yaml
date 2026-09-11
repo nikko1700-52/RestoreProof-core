@@ -33,8 +33,10 @@ checks_file: ./checks.yaml
 report:
   directory: ./reports
   formats:
-    - json
-    - markdown
+    - json        # canonical; the integrity digest covers this one
+    - markdown    # paste into a ticket
+    - junit       # your CI's test reporter understands this
+    - prometheus  # node_exporter textfile collector: alert on recovery
 
 security:
   allow_command_checks: true

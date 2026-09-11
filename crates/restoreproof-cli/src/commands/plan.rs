@@ -23,7 +23,12 @@ pub fn run(global: &GlobalArgs, out: &Output) -> ExitCode {
                 return ExitCode::Internal;
             }
         },
-        OutputFormat::Terminal | OutputFormat::Markdown => plan.render_text(),
+        // A plan is not a report: the CI and metrics formats describe a drill
+        // that has happened, so they fall back to the readable form here.
+        OutputFormat::Terminal
+        | OutputFormat::Markdown
+        | OutputFormat::Junit
+        | OutputFormat::Prometheus => plan.render_text(),
     };
 
     if out.emit(&rendered, global.output.as_deref()).is_err() {

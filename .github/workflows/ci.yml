@@ -98,6 +98,40 @@ jobs:
             ./target/release/restoreproof report "$report" --verify
           done
 
+      - name: The JUnit and Prometheus reports must be parseable
+        run: |
+          python3 - <<'PY'
+          import glob, re, sys
+          import xml.etree.ElementTree as ET
+
+          junit = glob.glob("examples/*/reports/*.junit.xml")
+          assert junit, "no JUnit report was written"
+          for path in junit:
+              root = ET.parse(path).getroot()
+              assert root.tag == "testsuites", path
+              assert root.findall(".//testcase"), path
+
+          prom = glob.glob("examples/*/reports/*.prom")
+          assert prom, "no Prometheus report was written"
+          sample = re.compile(r"^[a-zA-Z_:][a-zA-Z0-9_:]*\{[^}]*\} -?[0-9.eE+-]+$")
+          for path in prom:
+              for line in open(path):
+                  line = line.rstrip("\n")
+                  if line and not line.startswith("#") and not sample.match(line):
+                      sys.exit(f"unparseable sample in {path}: {line}")
+          print("JUnit and Prometheus output parse cleanly")
+          PY
+
+      - name: Comparing a report with itself must report no regression
+        run: |
+          report=$(ls examples/postgres-local/reports/*.json | head -1)
+          ./target/release/restoreproof diff "$report" "$report"
+
+      - name: Strict validation must be available
+        run: |
+          ./target/release/restoreproof validate \
+            --config examples/docker-compose-app/restoreproof.yaml --strict
+
       - name: No recovery environment may be left behind
         run: |
           leftovers=$(docker ps -a --filter "name=-rp-" --format '{{.Names}}')
@@ -105,6 +139,13 @@ jobs:
             echo "leftover containers: $leftovers" >&2
             exit 1
           fi
+
+      - name: Publish the drill as a test report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: examples/*/reports/*.junit.xml
+          fail_on_failure: false
 
       - uses: actions/upload-artifact@v4
         if: always()

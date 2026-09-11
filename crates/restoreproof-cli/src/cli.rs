@@ -76,6 +76,10 @@ pub struct GlobalArgs {
     #[arg(long, global = true)]
     pub dry_run: bool,
 
+    /// How to format log lines on standard error.
+    #[arg(long, global = true, value_enum, default_value_t = LogFormat::Text)]
+    pub log_format: LogFormat,
+
     /// Never emit ANSI colour, whatever the terminal says.
     ///
     /// The `NO_COLOR` environment variable has the same effect, following the
@@ -93,6 +97,19 @@ pub enum OutputFormat {
     Json,
     /// Markdown, suitable for a ticket.
     Markdown,
+    /// `JUnit` XML, for a CI system's test reporter.
+    Junit,
+    /// Prometheus text format, for the `node_exporter` textfile collector.
+    Prometheus,
+}
+
+/// Log line formatting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum LogFormat {
+    /// Human-readable lines.
+    Text,
+    /// One JSON object per line, for a log shipper.
+    Json,
 }
 
 /// Subcommands.
@@ -110,7 +127,14 @@ pub enum Command {
     },
 
     /// Check the configuration without running anything.
-    Validate,
+    Validate {
+        /// Treat warnings as errors.
+        ///
+        /// Useful as a CI gate: an approximated backup timestamp or an unpinned
+        /// image is not wrong, but you may not want it merged.
+        #[arg(long)]
+        strict: bool,
+    },
 
     /// Show what a drill would do, without doing it.
     Plan,
@@ -134,6 +158,26 @@ pub enum Command {
         /// Recompute the integrity digest and compare it with the recorded one.
         #[arg(long)]
         verify: bool,
+    },
+
+    /// Compare two reports and show what changed.
+    ///
+    /// Answers the question one report cannot: is recovery getting worse?
+    Diff {
+        /// The older report (JSON).
+        #[arg(value_name = "BEFORE")]
+        before: PathBuf,
+
+        /// The newer report (JSON).
+        #[arg(value_name = "AFTER")]
+        after: PathBuf,
+    },
+
+    /// Print a shell completion script.
+    Completions {
+        /// Shell to generate completions for.
+        #[arg(value_name = "SHELL")]
+        shell: clap_complete::Shell,
     },
 
     /// Print version, build and platform information.

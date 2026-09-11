@@ -192,6 +192,10 @@ pub async fn execute(
         .map(|format| match format {
             restoreproof_config::ReportFormat::Json => restoreproof_report::Format::Json,
             restoreproof_config::ReportFormat::Markdown => restoreproof_report::Format::Markdown,
+            restoreproof_config::ReportFormat::Junit => restoreproof_report::Format::Junit,
+            restoreproof_config::ReportFormat::Prometheus => {
+                restoreproof_report::Format::Prometheus
+            }
         })
         .collect();
     let report_files = restoreproof_report::write_all(&report, &scenario.report_dir, &formats)?;
