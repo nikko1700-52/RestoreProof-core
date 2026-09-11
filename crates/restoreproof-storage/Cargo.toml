@@ -1,0 +1,27 @@
+[package]
+name = "restoreproof-storage"
+description = "Backup sources for RestoreProof: local directories, restic and BorgBackup, behind one extensible trait."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+restoreproof-core.workspace = true
+restoreproof-config.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

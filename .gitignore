@@ -1,0 +1,7 @@
+/target/
+**/*.rs.bk
+/reports/
+/examples/*/reports/
+/examples/*/fixtures/restic-repository/
+.env
+*.log

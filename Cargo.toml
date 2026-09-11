@@ -1,0 +1,84 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/restoreproof-cli",
+    "crates/restoreproof-core",
+    "crates/restoreproof-config",
+    "crates/restoreproof-runner",
+    "crates/restoreproof-checks",
+    "crates/restoreproof-storage",
+    "crates/restoreproof-report",
+    "crates/restoreproof-testkit",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/nikko1700-52/RestoreProof-core"
+homepage = "https://github.com/nikko1700-52/RestoreProof-core"
+authors = ["The RestoreProof authors"]
+
+[workspace.dependencies]
+restoreproof-core = { path = "crates/restoreproof-core", version = "0.1.0" }
+restoreproof-config = { path = "crates/restoreproof-config", version = "0.1.0" }
+restoreproof-storage = { path = "crates/restoreproof-storage", version = "0.1.0" }
+restoreproof-checks = { path = "crates/restoreproof-checks", version = "0.1.0" }
+restoreproof-runner = { path = "crates/restoreproof-runner", version = "0.1.0" }
+restoreproof-report = { path = "crates/restoreproof-report", version = "0.1.0" }
+restoreproof-testkit = { path = "crates/restoreproof-testkit", version = "0.1.0" }
+
+anyhow = "1.0"
+async-trait = "0.1"
+assert_cmd = "2.0"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+clap = { version = "4.5", features = ["derive", "env", "wrap_help"] }
+predicates = "3.1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "charset", "http2"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml_ng = "0.10"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls-ring", "postgres", "chrono"] }
+tempfile = "3.14"
+thiserror = "2.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "time", "fs", "io-util", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+zeroize = { version = "1", features = ["derive"] }
+
+# Security-by-design lints applied to every crate in the workspace.
+# `unwrap`/`expect`/`panic` are denied in library code so that a malformed
+# backup, a hostile YAML file or an unreachable service can never abort the
+# process without an actionable error.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+exit = "deny"
+indexing_slicing = "deny"
+integer_division = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "warn"
+print_stderr = "warn"
+str_to_string = "warn"
+needless_pass_by_value = "warn"
+doc_markdown = "warn"
+must_use_candidate = "warn"
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
