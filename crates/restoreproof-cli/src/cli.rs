@@ -77,7 +77,10 @@ pub struct GlobalArgs {
     pub dry_run: bool,
 
     /// Never emit ANSI colour, whatever the terminal says.
-    #[arg(long, global = true, env = "NO_COLOR")]
+    ///
+    /// The `NO_COLOR` environment variable has the same effect, following the
+    /// convention that any non-empty value disables colour.
+    #[arg(long, global = true)]
     pub no_color: bool,
 }
 

@@ -1,0 +1,42 @@
+version: 1
+
+defaults:
+  timeout_seconds: 15
+  retry:
+    attempts: 20
+    delay_seconds: 2
+
+checks:
+  - id: index-restored
+    name: "The home page was restored to disk"
+    type: file
+    required: true
+    base: restore
+    path: index.html
+    min_size_bytes: 50
+
+  - id: web-healthy
+    name: "nginx reports healthy"
+    type: container
+    required: true
+    service: web
+    state: healthy
+
+  - id: home-page-answers
+    name: "The restored application answers on /"
+    description: "Not just 'a container is running' — the application serves the restored content."
+    type: http
+    required: true
+    method: GET
+    url: "http://127.0.0.1:18080/"
+    expected_status: 200
+    expect_body_contains: "restoreproof-ok"
+
+  - id: missing-page-is-404
+    name: "An unknown path still returns 404"
+    description: "Proves the server is really serving, not answering 200 to everything."
+    type: http
+    required: false
+    method: GET
+    url: "http://127.0.0.1:18080/definitely-not-here"
+    expected_status: 404

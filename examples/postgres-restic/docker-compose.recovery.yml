@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: restoreproof
+      POSTGRES_PASSWORD: restoreproof-local-drill
+    volumes:
+      - ${RESTOREPROOF_RESTORE_DIR}:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restoreproof -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

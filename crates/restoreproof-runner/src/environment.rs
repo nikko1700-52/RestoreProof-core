@@ -28,6 +28,16 @@ use crate::error::{Result, RunnerError};
 /// Interval between two readiness polls.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
+/// How many consecutive polls must report readiness before checks start.
+///
+/// One is not enough. `docker compose up --detach` returns as soon as the
+/// containers are created, and a service that crashes on startup — a database
+/// that cannot read the restored dump, say — is briefly reported as `running`
+/// before it exits. Requiring the state to hold across two polls costs one
+/// second and removes a race that would otherwise turn a broken recovery into a
+/// confusing series of connection-refused failures.
+const REQUIRED_STABLE_POLLS: u32 = 2;
+
 /// A running Compose project, torn down when it goes out of scope.
 #[derive(Debug)]
 pub struct RecoveryEnvironment {
@@ -63,7 +73,7 @@ impl RecoveryEnvironment {
             max_output_bytes,
         );
 
-        let environment = Self {
+        let mut environment = Self {
             cli,
             compose_file,
             project_directory,
@@ -72,18 +82,32 @@ impl RecoveryEnvironment {
             torn_down: false,
         };
 
-        let output = environment
+        let started = environment
             .cli
             .compose(&["up", "--detach", "--no-color", "--quiet-pull"], timeout)
-            .await?;
+            .await;
 
-        if !output.is_success() {
-            let details = output.stderr_tail(20);
-            return Err(RunnerError::Environment(format!(
-                "the recovery environment failed to start ({}):\n{details}",
-                output.describe_status()
-            )));
-        }
+        // `up` can fail after creating containers — a port already bound, an
+        // image that will not pull. Tear the project down here, explicitly and
+        // asynchronously, rather than leaving it to the drop guard: a blocking
+        // teardown from `Drop` inside the async runtime is a last resort, not
+        // something to depend on.
+        let output = match started {
+            Ok(output) if output.is_success() => output,
+            Ok(output) => {
+                let details = output.stderr_tail(20);
+                let status = output.describe_status();
+                environment.teardown().await.ok();
+                return Err(RunnerError::Environment(format!(
+                    "the recovery environment failed to start ({status}):\n{details}"
+                )));
+            }
+            Err(err) => {
+                environment.teardown().await.ok();
+                return Err(err);
+            }
+        };
+        drop(output);
 
         Ok(environment)
     }
@@ -143,6 +167,7 @@ impl RecoveryEnvironment {
         timeout: Duration,
     ) -> Result<Vec<ComposeService>> {
         let deadline = Instant::now() + timeout;
+        let mut stable_polls = 0u32;
 
         loop {
             let services = self.cli.services().await?;
@@ -176,7 +201,12 @@ impl RecoveryEnvironment {
             }
 
             if watched.iter().all(|service| service.is_ready()) {
-                return Ok(services);
+                stable_polls += 1;
+                if stable_polls >= REQUIRED_STABLE_POLLS {
+                    return Ok(services);
+                }
+            } else {
+                stable_polls = 0;
             }
 
             if Instant::now() >= deadline {
@@ -281,9 +311,11 @@ impl Drop for RecoveryEnvironment {
         if self.torn_down || !self.started || !self.cleanup {
             return;
         }
-        // Last-resort cleanup on an unwind or an early return. This is
-        // synchronous on purpose: `Drop` cannot await, and leaving a container
-        // holding restored production data behind is worse than blocking here.
+        // Last resort, for a panic or a cancelled future. Every ordinary path —
+        // success, a failed restore, a failed start, a timeout — calls
+        // `teardown()` explicitly, because a blocking call from `Drop` inside
+        // the async runtime cannot report errors and can race with the
+        // runtime's own child-process reaping.
         tracing::warn!(
             project = self.cli.project_name(),
             "tearing down the recovery environment from the drop guard"

@@ -31,12 +31,17 @@ impl Workspace {
         })?;
         restrict(&root);
 
+        // The restore directory is bind-mounted into containers that rarely run
+        // as root — PostgreSQL runs as uid 70, for instance — so it has to be
+        // traversable by them. Privacy on the host is provided by the parent
+        // directory, which is 0700: another local user cannot reach this path
+        // at all, whatever the mode of the directory itself.
         let restore_dir = root.join("restore");
         std::fs::create_dir_all(&restore_dir).map_err(|source| RunnerError::Io {
             context: format!("creating the restore directory `{}`", restore_dir.display()),
             source,
         })?;
-        restrict(&restore_dir);
+        set_mode(&restore_dir, 0o755);
 
         Ok(Self {
             root,
@@ -85,18 +90,22 @@ impl Drop for Workspace {
     }
 }
 
+/// Make a directory reachable only by its owner.
 fn restrict(path: &Path) {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        if let Err(err) = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)) {
-            tracing::warn!(path = %path.display(), error = %err, "could not restrict permissions");
-        }
+    set_mode(path, 0o700);
+}
+
+#[cfg(unix)]
+fn set_mode(path: &Path, mode: u32) {
+    use std::os::unix::fs::PermissionsExt as _;
+    if let Err(err) = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)) {
+        tracing::warn!(path = %path.display(), error = %err, "could not set permissions");
     }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-    }
+}
+
+#[cfg(not(unix))]
+fn set_mode(path: &Path, mode: u32) {
+    let _ = (path, mode);
 }
 
 #[cfg(test)]
@@ -115,7 +124,19 @@ mod tests {
             {
                 use std::os::unix::fs::PermissionsExt as _;
                 let mode = std::fs::metadata(&root).unwrap().permissions().mode();
-                assert_eq!(mode & 0o077, 0, "restored data must not be world-readable");
+                assert_eq!(
+                    mode & 0o077,
+                    0,
+                    "the workspace root must not be reachable by other local users"
+                );
+
+                // The restore directory itself must stay readable, because it
+                // is bind-mounted into containers that do not run as root.
+                let restore_mode = std::fs::metadata(workspace.restore_dir())
+                    .unwrap()
+                    .permissions()
+                    .mode();
+                assert_eq!(restore_mode & 0o755, 0o755);
             }
         }
         assert!(!root.exists(), "the workspace must be removed on drop");

@@ -77,6 +77,20 @@ pub async fn run(
         out.line("");
     }
 
+    // The rendered report may have gone to a file or to standard output. A
+    // failure must still be visible on standard error, so that a script that
+    // redirects the report somewhere else does not lose the reason.
+    if outcome.exit_code != ExitCode::Success {
+        for error in &outcome.report.errors {
+            out.error(error);
+        }
+        out.error(&format!(
+            "drill finished with status {} (exit code {})",
+            outcome.report.run.status,
+            outcome.exit_code.code()
+        ));
+    }
+
     if let Some(project) = &outcome.kept_environment {
         out.warn(&format!(
             "the recovery environment is still running. Remove it with `docker compose -p {project} down -v`."

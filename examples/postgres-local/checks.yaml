@@ -1,0 +1,50 @@
+version: 1
+
+defaults:
+  timeout_seconds: 20
+  retry:
+    attempts: 20
+    delay_seconds: 2
+
+checks:
+  - id: dump-restored
+    name: "The dump was restored to disk"
+    description: "Before anything starts, the bytes must actually be there."
+    type: file
+    required: true
+    base: restore
+    path: dump.sql
+    min_size_bytes: 200
+
+  - id: database-healthy
+    name: "PostgreSQL reports healthy"
+    description: "The database process accepted the restored dump and is serving."
+    type: container
+    required: true
+    service: database
+    state: healthy
+
+  - id: orders-present
+    name: "The orders table contains data"
+    description: "An empty table after a restore is the classic silent failure."
+    type: sql
+    required: true
+    dsn_env: RESTOREPROOF_DEMO_DATABASE_URL
+    query: "SELECT count(*) FROM orders"
+    min_value: 1
+
+  - id: customers-present
+    name: "The customers table contains data"
+    type: sql
+    required: true
+    dsn_env: RESTOREPROOF_DEMO_DATABASE_URL
+    query: "SELECT count(*) FROM customers"
+    expect_value: "3"
+
+  - id: latest-order
+    name: "The most recent order came back"
+    type: sql
+    required: false
+    dsn_env: RESTOREPROOF_DEMO_DATABASE_URL
+    query: "SELECT customer FROM orders ORDER BY id DESC LIMIT 1"
+    expect_value: "ada"

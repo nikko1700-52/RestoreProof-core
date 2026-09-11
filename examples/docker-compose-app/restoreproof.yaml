@@ -1,0 +1,43 @@
+version: 1
+
+project:
+  name: web-app
+  description: "Restore a web tier from a backup and prove it answers"
+  application_version: "2026.1.3"
+
+backup:
+  type: local
+  path: ./backup
+  # This example ships a metadata file, so the RPO is computed from the real
+  # backup time rather than from file modification times. The timestamp is
+  # fixed, which means the drill will report RPO_FAIL as it ages — that is the
+  # honest behaviour, and a good illustration of what the RPO actually measures.
+  metadata_file: ./backup/backup-metadata.json
+
+recovery:
+  compose_file: ./docker-compose.recovery.yml
+  project_name: web-app
+  startup_timeout_seconds: 120
+  total_timeout_seconds: 600
+  cleanup: true
+  network_isolated: true
+  wait_for:
+    - web
+
+metrics:
+  target_rto_seconds: 300
+  target_rpo_seconds: 86400
+
+checks_file: ./checks.yaml
+
+report:
+  directory: ./reports
+  formats:
+    - json
+    - markdown
+
+security:
+  allow_command_checks: true
+  allow_external_http_targets: false
+  allow_external_sql_targets: false
+  allow_published_ports: false

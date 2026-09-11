@@ -1,0 +1,4 @@
+target/
+.git/
+examples/*/reports/
+examples/postgres-restic/fixtures/

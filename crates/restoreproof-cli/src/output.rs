@@ -23,7 +23,7 @@ impl Output {
     pub fn new(global: &GlobalArgs) -> Self {
         Self {
             quiet: global.quiet,
-            color: !global.no_color && std::io::stdout().is_terminal(),
+            color: !color_disabled(global) && std::io::stdout().is_terminal(),
         }
     }
 
@@ -99,6 +99,13 @@ impl Output {
     }
 }
 
+/// Whether colour is disabled, by flag or by the `NO_COLOR` convention.
+///
+/// <https://no-color.org>: any non-empty value disables colour.
+fn color_disabled(global: &GlobalArgs) -> bool {
+    global.no_color || std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty())
+}
+
 /// Configure logging from `--verbose` / `--quiet`.
 ///
 /// Logs go to standard error so they never mix with a report written to
@@ -122,6 +129,6 @@ pub fn init_tracing(global: &GlobalArgs) {
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
         .with_target(false)
-        .with_ansi(!global.no_color && std::io::stderr().is_terminal())
+        .with_ansi(!color_disabled(global) && std::io::stderr().is_terminal())
         .try_init();
 }

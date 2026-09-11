@@ -19,6 +19,13 @@ pub struct CheckEvaluation {
     pub message: String,
     /// Captured evidence: response bodies, command output, query results.
     pub details: Vec<String>,
+    /// Whether retrying could plausibly change the answer.
+    ///
+    /// Retries exist to absorb a service that is still warming up. When the
+    /// environment has given a definitive answer — the table does not exist,
+    /// the file is the wrong size, the script returned 3 — repeating the check
+    /// only makes the drill slower and the report less clear.
+    pub retryable: bool,
 }
 
 impl CheckEvaluation {
@@ -29,6 +36,7 @@ impl CheckEvaluation {
             status: CheckStatus::Passed,
             message: message.into(),
             details: Vec::new(),
+            retryable: false,
         }
     }
 
@@ -39,6 +47,7 @@ impl CheckEvaluation {
             status: CheckStatus::Failed,
             message: message.into(),
             details: Vec::new(),
+            retryable: true,
         }
     }
 
@@ -53,6 +62,7 @@ impl CheckEvaluation {
             status: CheckStatus::Error,
             message: message.into(),
             details: Vec::new(),
+            retryable: false,
         }
     }
 
@@ -63,6 +73,7 @@ impl CheckEvaluation {
             status: CheckStatus::Skipped,
             message: message.into(),
             details: Vec::new(),
+            retryable: false,
         }
     }
 
@@ -70,6 +81,13 @@ impl CheckEvaluation {
     #[must_use]
     pub fn with_details(mut self, details: Vec<String>) -> Self {
         self.details = details;
+        self
+    }
+
+    /// Mark this outcome as definitive: retrying cannot change it.
+    #[must_use]
+    pub const fn final_answer(mut self) -> Self {
+        self.retryable = false;
         self
     }
 
@@ -150,7 +168,10 @@ pub async fn run_check(
             )),
         };
 
-        if evaluation.status == CheckStatus::Passed || evaluation.status == CheckStatus::Skipped {
+        if evaluation.status == CheckStatus::Passed
+            || evaluation.status == CheckStatus::Skipped
+            || !evaluation.retryable
+        {
             break;
         }
         if attempts < attempts_allowed {
@@ -219,6 +240,19 @@ mod tests {
         let outcome = run_check(&spec, &CheckDefaults::default(), &context_with()).await;
         assert_eq!(outcome.status, CheckStatus::Failed);
         assert_eq!(outcome.attempts, 3);
+    }
+
+    #[tokio::test]
+    async fn a_definitive_failure_is_not_retried() {
+        // A missing environment variable is an ERROR, which is never retryable.
+        let mut spec = crate::test_support::sql_spec("q", "ABSENT_VAR", "SELECT 1");
+        spec.retry = Some(RetrySpec {
+            attempts: 5,
+            delay_seconds: 0,
+        });
+        let outcome = run_check(&spec, &CheckDefaults::default(), &context_with()).await;
+        assert_eq!(outcome.status, CheckStatus::Error);
+        assert_eq!(outcome.attempts, 1, "an error must not be retried");
     }
 
     #[tokio::test]

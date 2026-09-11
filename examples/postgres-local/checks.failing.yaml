@@ -1,0 +1,31 @@
+# The same drill, with one assertion that cannot hold.
+#
+# Use it to see what a failure looks like before you trust a success:
+#   restoreproof run --config examples/postgres-local/restoreproof.failing.yaml
+#
+# Expected result: FAILED, exit code 1, and a report naming `invoices` as the
+# table that is missing from the restored database.
+version: 1
+
+defaults:
+  timeout_seconds: 20
+  retry:
+    attempts: 20
+    delay_seconds: 2
+
+checks:
+  - id: database-healthy
+    name: "PostgreSQL reports healthy"
+    type: container
+    required: true
+    service: database
+    state: healthy
+
+  - id: invoices-present
+    name: "The invoices table contains data"
+    description: "This table was never in the backup, so the drill must fail."
+    type: sql
+    required: true
+    dsn_env: RESTOREPROOF_DEMO_DATABASE_URL
+    query: "SELECT count(*) FROM invoices"
+    min_value: 1

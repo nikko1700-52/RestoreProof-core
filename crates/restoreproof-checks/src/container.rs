@@ -134,8 +134,14 @@ impl CheckExecutor for ContainerExecutor {
         }
 
         CheckEvaluation::passed(format!(
-            "service `{}` is {}",
-            container.service, observation.state
+            "service `{}` is {}{}",
+            container.service,
+            observation.state,
+            observation
+                .health
+                .as_ref()
+                .map(|health| format!(" and {health}"))
+                .unwrap_or_default()
         ))
         .with_details(details)
     }

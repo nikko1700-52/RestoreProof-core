@@ -1,0 +1,41 @@
+version: 1
+
+project:
+  name: postgres-restic
+  description: "Restore the latest restic snapshot and prove the database comes back"
+
+backup:
+  type: restic
+  repository: ./fixtures/restic-repository
+  # The password is read from a file that is never committed. `password_env:`
+  # is the alternative when your secrets live in the environment.
+  password_file: ./fixtures/restic-password
+  snapshot: latest
+
+recovery:
+  compose_file: ./docker-compose.recovery.yml
+  project_name: postgres-restic
+  startup_timeout_seconds: 180
+  total_timeout_seconds: 1800
+  cleanup: true
+  network_isolated: true
+  wait_for:
+    - database
+
+metrics:
+  target_rto_seconds: 900
+  target_rpo_seconds: 86400
+
+checks_file: ./checks.yaml
+
+report:
+  directory: ./reports
+  formats:
+    - json
+    - markdown
+
+security:
+  allow_command_checks: true
+  allow_external_http_targets: false
+  allow_external_sql_targets: false
+  allow_published_ports: false

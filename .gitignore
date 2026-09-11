@@ -5,3 +5,4 @@
 /examples/*/fixtures/restic-repository/
 .env
 *.log
+/examples/postgres-restic/fixtures/

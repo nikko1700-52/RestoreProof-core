@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest something for RestoreProof Core
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing: the open-source edition is deliberately a
+        single-machine, single-scenario tool. Web interfaces, schedulers,
+        multi-tenancy, Kubernetes and hypervisor environments are out of scope —
+        see [PREMIUM.md](../blob/main/PREMIUM.md) and
+        [ROADMAP.md](../blob/main/ROADMAP.md).
+
+        If you think something on that list should be open source instead, make
+        the argument here. The list is a plan, not a promise to keep things
+        from you.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can you not prove about your recovery today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: A configuration sketch is worth a lot here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead

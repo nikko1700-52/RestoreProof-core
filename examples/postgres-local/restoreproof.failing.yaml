@@ -1,0 +1,44 @@
+version: 1
+
+project:
+  name: postgres-local-failing
+  description: "Deliberately failing drill: proves that a broken recovery is reported as broken"
+
+backup:
+  type: local
+  path: ./backup
+  # No `metadata_file` here on purpose: this example must work straight from a
+  # clone. The backup timestamp is then derived from file modification times,
+  # the report says so explicitly, and the RPO is reported as an approximation.
+  #
+  # In a real setup, write a metadata file from your backup job and point at it:
+  #   metadata_file: ./backup/backup-metadata.json
+
+recovery:
+  compose_file: ./docker-compose.recovery.yml
+  project_name: postgres-local-failing
+  startup_timeout_seconds: 180
+  total_timeout_seconds: 900
+  cleanup: true
+  network_isolated: true
+  wait_for:
+    - database
+
+metrics:
+  target_rto_seconds: 600
+  target_rpo_seconds: 86400
+
+checks_file: ./checks.failing.yaml
+
+report:
+  directory: ./reports
+  formats:
+    - json
+    - markdown
+
+security:
+  allow_command_checks: true
+  allow_external_http_targets: false
+  allow_external_sql_targets: false
+  allow_published_ports: false
+  allow_external_paths: []

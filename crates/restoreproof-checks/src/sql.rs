@@ -67,6 +67,13 @@ impl CheckExecutor for SqlExecutor {
 
         match query(sql, dsn.expose_secret()).await {
             Ok(rows) => evaluate(sql, &rows),
+            // A `Database` error means the server answered: the table does not
+            // exist, the column is unknown, permission was denied. Retrying
+            // cannot change that, and doing so only delays the report.
+            Err(err @ sqlx::Error::Database(_)) => {
+                CheckEvaluation::failed(format!("the recovered database rejected the query: {err}"))
+                    .final_answer()
+            }
             Err(err) => CheckEvaluation::failed(format!(
                 "the query could not be executed against the recovered database: {err}"
             )),

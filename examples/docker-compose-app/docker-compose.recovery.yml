@@ -1,0 +1,17 @@
+# A web tier restored from a backup and served by nginx.
+#
+# There is no custom image to build: the point of the example is the drill, not
+# the application.
+services:
+  web:
+    image: nginx:1.27-alpine
+    volumes:
+      # Injected by RestoreProof: the directory the backup was restored into.
+      - ${RESTOREPROOF_RESTORE_DIR}:/usr/share/nginx/html:ro
+    ports:
+      - "127.0.0.1:18080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

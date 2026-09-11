@@ -263,7 +263,7 @@ async fn drill(
             // --- Start the environment --------------------------------------
             let project = unique_project_name(scenario.compose_project_base(), run_id);
             progress.environment_started_at = Some(Utc::now());
-            let environment = RecoveryEnvironment::start(
+            RecoveryEnvironment::start(
                 scenario.compose_file.clone(),
                 project_directory(&scenario.compose_file),
                 project,
@@ -272,16 +272,7 @@ async fn drill(
                 cleanup,
                 Duration::from_secs(scenario.raw.recovery.startup_timeout_seconds),
             )
-            .await?;
-
-            environment
-                .wait_until_ready(
-                    &scenario.raw.recovery.wait_for,
-                    Duration::from_secs(scenario.raw.recovery.startup_timeout_seconds),
-                )
-                .await?;
-
-            environment
+            .await?
         }
         RunMode::ChecksOnly => RecoveryEnvironment::attach(
             scenario.compose_file.clone(),
@@ -292,7 +283,63 @@ async fn drill(
         ),
     };
 
-    // --- Checks ---------------------------------------------------------
+    // From here the environment is up. Everything that can fail is run first,
+    // and the teardown below happens whatever the outcome — an error inside
+    // this block must never skip it.
+    let result = wait_and_check(
+        scenario,
+        options,
+        &environment,
+        redactor,
+        secrets,
+        progress,
+        restore_dir,
+    )
+    .await;
+
+    // --- Teardown --------------------------------------------------------
+    if options.keep_environment {
+        progress.kept_environment = Some(environment.project_name().to_owned());
+        progress.warnings.push(format!(
+            "--keep-environment: the recovery environment `{}` and the workspace `{}` were left in \
+             place. They hold restored data; remove them with `docker compose -p {} down -v`.",
+            environment.project_name(),
+            workspace.root().display(),
+            environment.project_name()
+        ));
+        workspace.keep(true);
+    } else if let Err(err) = environment.teardown().await {
+        progress.warnings.push(err.to_string());
+    } else {
+        progress.cleaned_up = matches!(options.mode, RunMode::Full) && cleanup;
+    }
+
+    result
+}
+
+/// Wait for readiness and run every check.
+#[allow(clippy::too_many_arguments)]
+///
+/// Split out of [`drill`] so that the teardown there is unconditional: an early
+/// return from this function cannot skip it.
+async fn wait_and_check(
+    scenario: &Scenario,
+    options: &RunOptions,
+    environment: &RecoveryEnvironment,
+    redactor: &Redactor,
+    secrets: BTreeMap<String, Secret>,
+    progress: &mut Progress,
+    restore_dir: PathBuf,
+) -> Result<()> {
+    if matches!(options.mode, RunMode::Full) {
+        environment
+            .wait_until_ready(
+                &scenario.raw.recovery.wait_for,
+                Duration::from_secs(scenario.raw.recovery.startup_timeout_seconds),
+            )
+            .await?;
+    }
+
     let context = CheckContext {
         project_root: scenario.project_root().to_path_buf(),
         restore_dir,
@@ -312,23 +359,6 @@ async fn drill(
             "check finished"
         );
         progress.checks.push(outcome);
-    }
-
-    // --- Teardown --------------------------------------------------------
-    if options.keep_environment {
-        progress.kept_environment = Some(environment.project_name().to_owned());
-        progress.warnings.push(format!(
-            "--keep-environment: the recovery environment `{}` and the workspace `{}` were left in \
-             place. They hold restored data; remove them with `docker compose -p {} down -v`.",
-            environment.project_name(),
-            workspace.root().display(),
-            environment.project_name()
-        ));
-        workspace.keep(true);
-    } else if let Err(err) = environment.teardown().await {
-        progress.warnings.push(err.to_string());
-    } else {
-        progress.cleaned_up = matches!(options.mode, RunMode::Full) && cleanup;
     }
 
     Ok(())

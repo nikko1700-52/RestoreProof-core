@@ -1,0 +1,44 @@
+# cargo-deny configuration.
+#
+# Enforced in CI on every push. The intent is narrow and boring: only
+# permissive licences, no known-vulnerable dependencies, no crates from
+# unexpected sources.
+
+[graph]
+all-features = true
+
+[licenses]
+# Every licence the dependency tree is allowed to use. Adding one here is a
+# deliberate decision, not a formality: a copyleft licence in a binary this
+# project distributes would change the terms under which users receive it.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "Unicode-3.0",
+    "Unlicense",
+    "BSL-1.0",
+    "CDLA-Permissive-2.0",
+    "CC0-1.0",
+    "MPL-2.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[advisories]
+# Fail on any advisory affecting the dependency tree. Yanked crates are an
+# error too: a yanked version is one the author asked people to stop using.
+yanked = "deny"
+ignore = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

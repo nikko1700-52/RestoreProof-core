@@ -122,7 +122,8 @@ async fn evaluate_existing(file: &FileCheck, resolved: &Path) -> CheckEvaluation
                 "`{}` has digest {digest}, expected {expected}",
                 file.path.display()
             ))
-            .with_details(details);
+            .with_details(details)
+            .final_answer();
         }
     }
 
