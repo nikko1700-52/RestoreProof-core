@@ -76,6 +76,24 @@ report it.
 Support with response times, SLAs, private installation, and professional
 integration work.
 
+## How the boundary is enforced
+
+Not by good intentions. `cargo test -p restoreproof-cli --test open_source_guarantees`
+runs on every push and fails the build if:
+
+* any licence, entitlement, activation or telemetry identifier appears in the
+  code — documentation may discuss them freely, comments are stripped before
+  scanning;
+* any crate here gains a dependency on a commercial crate, which would make this
+  edition unbuildable for everyone else;
+* `restoreproof --help` ever mentions an account, an activation or a
+  subscription;
+* the promises above disappear from this file.
+
+The test is deliberately annoying to work around. If one of those checks fails,
+the question is not how to silence it — it is whether the change belongs in the
+commercial repository instead.
+
 ## Why this split
 
 Three honest reasons.

@@ -162,6 +162,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --workspace --all-features
 
+  edition-boundary:
+    name: Open-source guarantees
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # PREMIUM.md promises that this edition has no licence check, no feature
+      # flag and no telemetry. A promise in a Markdown file decays; this makes
+      # it a build failure.
+      - run: cargo test -p restoreproof-cli --test open_source_guarantees
+
   supply-chain:
     name: Advisories and licences
     runs-on: ubuntu-latest
