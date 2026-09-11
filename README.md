@@ -1,5 +1,7 @@
 # RestoreProof Core
 
+***English** · [Français](README.fr.md)*
+
 **Stop saying your backups work. Prove your application can actually come back.**
 
 RestoreProof runs a *recovery drill*: it restores a backup into an isolated

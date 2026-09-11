@@ -124,6 +124,11 @@ If you change behaviour, update the docs in the same pull request:
 * a new field → `docs/configuration.md`
 * a scope decision → `PREMIUM.md` or `ROADMAP.md`
 
+There is a French translation of the README (`README.fr.md`). If you change
+`README.md` in a way that affects what the tool does or promises, please update
+it too, or say in the pull request that it needs updating — a translation that
+quietly says something different from the original is worse than none.
+
 And please keep the claims honest. No invented benchmarks, no "enterprise-ready",
 no capability that is not implemented. The whole point of this project is that
 its output can be trusted; the documentation is held to the same standard.
