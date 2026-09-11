@@ -408,7 +408,9 @@ impl<'de> Deserialize<'de> for CheckSpec {
     fn deserialize<D: serde::Deserializer<'de>>(
         deserializer: D,
     ) -> std::result::Result<Self, D::Error> {
-        use crate::tagged::{as_mapping, from_mapping, take_optional, take_optional_string, take_tag};
+        use crate::tagged::{
+            as_mapping, from_mapping, take_optional, take_optional_string, take_tag,
+        };
         use serde::de::Error as _;
 
         let value = serde_yaml_ng::Value::deserialize(deserializer)?;
@@ -418,10 +420,12 @@ impl<'de> Deserialize<'de> for CheckSpec {
         let context = format!("checks[{id}]");
         let name = take_optional_string::<D::Error>(&context, &mut mapping, "name")?;
         let description = take_optional_string::<D::Error>(&context, &mut mapping, "description")?;
-        let enabled = take_optional::<bool, D::Error>(&context, &mut mapping, "enabled")?.unwrap_or(true);
+        let enabled =
+            take_optional::<bool, D::Error>(&context, &mut mapping, "enabled")?.unwrap_or(true);
         let required =
             take_optional::<bool, D::Error>(&context, &mut mapping, "required")?.unwrap_or(true);
-        let timeout_seconds = take_optional::<u64, D::Error>(&context, &mut mapping, "timeout_seconds")?;
+        let timeout_seconds =
+            take_optional::<u64, D::Error>(&context, &mut mapping, "timeout_seconds")?;
         let retry = take_optional::<RetrySpec, D::Error>(&context, &mut mapping, "retry")?;
         let tag = take_tag::<D::Error>(&context, &mut mapping, "type")?;
 

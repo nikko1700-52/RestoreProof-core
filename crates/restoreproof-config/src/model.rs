@@ -183,15 +183,29 @@ pub struct BorgBackup {
 }
 
 impl<'de> Deserialize<'de> for BackupSpec {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
         use serde::de::Error as _;
 
-        let mut mapping = crate::tagged::as_mapping::<D::Error>("backup", serde_yaml_ng::Value::deserialize(deserializer)?)?;
+        let mut mapping = crate::tagged::as_mapping::<D::Error>(
+            "backup",
+            serde_yaml_ng::Value::deserialize(deserializer)?,
+        )?;
         let tag = crate::tagged::take_tag::<D::Error>("backup", &mut mapping, "type")?;
         match tag.as_str() {
-            "local" => Ok(Self::Local(crate::tagged::from_mapping::<_, D::Error>("backup (type: local)", mapping)?)),
-            "restic" => Ok(Self::Restic(crate::tagged::from_mapping::<_, D::Error>("backup (type: restic)", mapping)?)),
-            "borg" => Ok(Self::Borg(crate::tagged::from_mapping::<_, D::Error>("backup (type: borg)", mapping)?)),
+            "local" => Ok(Self::Local(crate::tagged::from_mapping::<_, D::Error>(
+                "backup (type: local)",
+                mapping,
+            )?)),
+            "restic" => Ok(Self::Restic(crate::tagged::from_mapping::<_, D::Error>(
+                "backup (type: restic)",
+                mapping,
+            )?)),
+            "borg" => Ok(Self::Borg(crate::tagged::from_mapping::<_, D::Error>(
+                "backup (type: borg)",
+                mapping,
+            )?)),
             other => Err(D::Error::custom(format!(
                 "backup: unknown type `{other}`. Supported types in the open-source edition are: \
                  local, restic, borg."
@@ -316,10 +330,18 @@ pub struct SecuritySpec {
     /// turns the drill into a request forgery tool.
     #[serde(default)]
     pub allow_external_http_targets: bool,
-    /// Allow the Compose file to publish ports on the host.
+    /// Allow SQL checks to connect to a database other than one on loopback.
     ///
-    /// Disabled by default so that a restored copy of production data is not
-    /// exposed on the network of the machine running the drill.
+    /// Disabled by default for the same reason: a drill queries the database it
+    /// just restored, so a remote DSN means either a mistake or a query aimed at
+    /// production.
+    #[serde(default)]
+    pub allow_external_sql_targets: bool,
+    /// Allow the Compose file to publish ports on every network interface.
+    ///
+    /// Publishing on a loopback address (`127.0.0.1:15432:5432`) is always
+    /// allowed and is what HTTP and SQL checks use. This switch only governs
+    /// bindings that expose a restored copy of production data to the network.
     #[serde(default)]
     pub allow_published_ports: bool,
     /// Maximum bytes captured from a single external command.
@@ -333,6 +355,7 @@ impl Default for SecuritySpec {
             allow_command_checks: true,
             allow_external_paths: Vec::new(),
             allow_external_http_targets: false,
+            allow_external_sql_targets: false,
             allow_published_ports: false,
             max_command_output_bytes: DEFAULT_MAX_OUTPUT_BYTES,
         }

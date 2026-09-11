@@ -82,7 +82,9 @@ impl BorgSource {
 
         match &self.secret {
             ResolvedSecret::File(path) => {
-                spec = spec.env("BORG_PASSPHRASE_FD", "-").env("BORG_PASSCOMMAND", String::new());
+                spec = spec
+                    .env("BORG_PASSPHRASE_FD", "-")
+                    .env("BORG_PASSCOMMAND", String::new());
                 // borg has no passphrase-file variable; read it and pass the
                 // value, which stays out of argv.
                 if let Ok(value) = std::fs::read_to_string(path) {
@@ -175,9 +177,7 @@ impl BackupSource for BorgSource {
     async fn inspect(&self) -> Result<BackupMetadata> {
         let archive = self.resolve_archive().await?;
         let created_at = archive.time.as_deref().and_then(parse_borg_time);
-        let mut notes = vec![
-            "BorgBackup support is experimental in this release".to_owned(),
-        ];
+        let mut notes = vec!["BorgBackup support is experimental in this release".to_owned()];
         if created_at.is_some() {
             notes.push(
                 "borg reports archive timestamps without a UTC offset; the timestamp was \
@@ -203,7 +203,11 @@ impl BackupSource for BorgSource {
         let output = self
             .command(self.limits.restore_timeout)
             .arg("extract")
-            .arg(format!("{}::{}", self.repository.as_argument(), archive.name))
+            .arg(format!(
+                "{}::{}",
+                self.repository.as_argument(),
+                archive.name
+            ))
             // borg extract writes relative to the working directory.
             .workdir(destination)
             .run()

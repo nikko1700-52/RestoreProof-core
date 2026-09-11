@@ -101,12 +101,13 @@ impl BackupSource for LocalSource {
                     path: path.clone(),
                     source,
                 })?;
-                let parsed: LocalMetadataFile =
-                    serde_json::from_str(&text).map_err(|err| StorageError::InvalidBackup(format!(
+                let parsed: LocalMetadataFile = serde_json::from_str(&text).map_err(|err| {
+                    StorageError::InvalidBackup(format!(
                         "`{}` is not a valid metadata file: {err}. Expected \
                          {{\"created_at\": \"<RFC 3339>\"}}.",
                         path.display()
-                    )))?;
+                    ))
+                })?;
                 snapshot_id = parsed.snapshot_id;
                 Some(parsed.created_at)
             }
@@ -175,7 +176,9 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<(u64, Vec<String>)> {
     })?;
 
     if metadata.is_file() {
-        let name = source.file_name().unwrap_or_else(|| std::ffi::OsStr::new("backup"));
+        let name = source
+            .file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("backup"));
         let target = destination.join(name);
         copied = copy_file(source, &target)?;
         log.push(format!("copied 1 file ({copied} bytes)"));
@@ -215,7 +218,8 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<(u64, Vec<String>)> {
             if entry_metadata.is_dir() {
                 stack.push(child);
             } else if entry_metadata.is_file() {
-                copied = copied.saturating_add(copy_file(&source.join(&child), &destination.join(&child))?);
+                copied = copied
+                    .saturating_add(copy_file(&source.join(&child), &destination.join(&child))?);
                 files += 1;
             } else {
                 skipped += 1;

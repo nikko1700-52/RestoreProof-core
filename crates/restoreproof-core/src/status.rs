@@ -176,7 +176,10 @@ mod tests {
     #[test]
     fn parses_common_spellings() {
         assert_eq!("pass".parse::<CheckStatus>().unwrap(), CheckStatus::Passed);
-        assert_eq!(" FAILED ".parse::<CheckStatus>().unwrap(), CheckStatus::Failed);
+        assert_eq!(
+            " FAILED ".parse::<CheckStatus>().unwrap(),
+            CheckStatus::Failed
+        );
         assert_eq!("skip".parse::<CheckStatus>().unwrap(), CheckStatus::Skipped);
         assert!("nonsense".parse::<CheckStatus>().is_err());
     }

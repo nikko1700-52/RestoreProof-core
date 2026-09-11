@@ -328,14 +328,18 @@ impl Report {
     }
 }
 
-fn hex_encode(bytes: &[u8]) -> String {
+/// Hex-encode a byte slice, lower case.
+#[must_use]
+pub fn hex_encode(bytes: &[u8]) -> String {
     use std::fmt::Write as _;
 
-    bytes.iter().fold(String::with_capacity(bytes.len() * 2), |mut acc, byte| {
-        // Writing to a String is infallible.
-        let _ = write!(acc, "{byte:02x}");
-        acc
-    })
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut acc, byte| {
+            // Writing to a String is infallible.
+            let _ = write!(acc, "{byte:02x}");
+            acc
+        })
 }
 
 /// SHA-256 of an arbitrary byte slice, hex encoded.

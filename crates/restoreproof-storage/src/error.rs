@@ -77,7 +77,11 @@ impl StorageError {
 
     /// Convert a process error, mapping "not found" to a missing dependency.
     #[must_use]
-    pub fn from_process(error: ProcessError, source_type: &'static str, tool: &'static str) -> Self {
+    pub fn from_process(
+        error: ProcessError,
+        source_type: &'static str,
+        tool: &'static str,
+    ) -> Self {
         match error {
             ProcessError::NotFound { .. } => Self::ToolMissing { tool, source_type },
             ProcessError::Timeout { program, seconds } => {

@@ -1,5 +1,6 @@
 [package]
 name = "restoreproof-runner"
+description = "Recovery drill orchestration for RestoreProof: isolated Docker Compose environments, guaranteed cleanup and report assembly."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,3 +13,19 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
+restoreproof-core.workspace = true
+restoreproof-config.workspace = true
+restoreproof-checks.workspace = true
+restoreproof-storage.workspace = true
+restoreproof-report.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

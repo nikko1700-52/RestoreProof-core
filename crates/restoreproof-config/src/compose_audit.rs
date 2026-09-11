@@ -50,16 +50,7 @@ const DANGEROUS_CAPABILITIES: [&str; 7] = [
 
 /// Host paths that must never be bind-mounted into a recovery environment.
 const FORBIDDEN_MOUNT_PREFIXES: [&str; 10] = [
-    "/",
-    "/boot",
-    "/dev",
-    "/etc",
-    "/proc",
-    "/root",
-    "/run",
-    "/sys",
-    "/usr",
-    "/var",
+    "/", "/boot", "/dev", "/etc", "/proc", "/root", "/run", "/sys", "/usr", "/var",
 ];
 
 /// Compose variables the runner itself injects, and which are therefore safe to
@@ -195,7 +186,10 @@ fn audit_service(
     if let Some(opts) = service.get("security_opt").and_then(Value::as_sequence) {
         for opt in opts {
             let opt = opt.as_str().unwrap_or_default().to_lowercase();
-            if opt.contains("unconfined") || opt.contains("label:disable") || opt.contains("no-new-privileges:false") {
+            if opt.contains("unconfined")
+                || opt.contains("label:disable")
+                || opt.contains("no-new-privileges:false")
+            {
                 audit.errors.push(format!(
                     "service `{name}` sets `security_opt: {opt}`, which disables a kernel \
                      confinement mechanism."
@@ -214,19 +208,76 @@ fn audit_service(
         ));
     }
 
-    if let Some(ports) = service.get("ports").and_then(Value::as_sequence)
-        && !ports.is_empty()
-        && !security.allow_published_ports
-    {
-        audit.errors.push(format!(
-            "service `{name}` publishes ports on the host. A recovery environment usually holds a \
-             copy of production data and should not be reachable from the host network. Set \
-             `security.allow_published_ports: true` to accept this."
-        ));
-    }
+    audit_ports(name, service, security, audit);
 
     audit_volumes(name, service, compose_path, policy, audit);
     audit_image(name, service, audit);
+}
+
+/// Published ports are the one place a recovery environment becomes reachable.
+///
+/// Binding to a loopback address is accepted: the restored copy of production
+/// data is then reachable only from the machine running the drill, which is
+/// exactly what a SQL or HTTP check needs. Binding to every interface is
+/// refused unless the operator opts in, because it exposes that data to the
+/// network.
+fn audit_ports(name: &str, service: &Value, security: &SecuritySpec, audit: &mut ComposeAudit) {
+    let Some(ports) = service.get("ports").and_then(Value::as_sequence) else {
+        return;
+    };
+
+    for entry in ports {
+        let host_ip = match entry {
+            Value::String(spec) => host_ip_from_short_form(spec),
+            Value::Number(_) => None,
+            Value::Mapping(_) => entry
+                .get("host_ip")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            _ => continue,
+        };
+
+        let bound_to_loopback = host_ip.as_deref().is_some_and(is_loopback_literal);
+        if bound_to_loopback || security.allow_published_ports {
+            continue;
+        }
+
+        let rendered = match entry {
+            Value::String(spec) => spec.clone(),
+            other => format!("{other:?}"),
+        };
+        audit.errors.push(format!(
+            "service `{name}` publishes `{rendered}` on every network interface. A recovery \
+             environment holds a copy of production data and must not be reachable from outside \
+             this machine.\n\
+             Bind it to loopback instead — `127.0.0.1:<host port>:<container port>` — or set \
+             `security.allow_published_ports: true` if exposing it is intended."
+        ));
+    }
+}
+
+/// Extract the host IP from `HOST_IP:HOST_PORT:CONTAINER_PORT`.
+///
+/// Handles IPv6 literals in brackets, and returns `None` for the shorter forms
+/// (`"8080:80"`, `"80"`), which bind every interface.
+fn host_ip_from_short_form(spec: &str) -> Option<String> {
+    let spec = spec.split('/').next().unwrap_or(spec);
+    if let Some(rest) = spec.strip_prefix('[') {
+        let (address, _) = rest.split_once(']')?;
+        return Some(address.to_owned());
+    }
+    let parts: Vec<&str> = spec.split(':').collect();
+    if parts.len() >= 3 {
+        return parts.first().map(|value| (*value).to_owned());
+    }
+    None
+}
+
+fn is_loopback_literal(value: &str) -> bool {
+    value
+        .parse::<std::net::IpAddr>()
+        .is_ok_and(|address| address.is_loopback())
+        || value.eq_ignore_ascii_case("localhost")
 }
 
 fn audit_volumes(
@@ -244,7 +295,10 @@ fn audit_volumes(
         let source = match volume {
             Value::String(spec) => spec.split(':').next().unwrap_or_default().to_owned(),
             Value::Mapping(_) => {
-                let kind = volume.get("type").and_then(Value::as_str).unwrap_or("volume");
+                let kind = volume
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("volume");
                 if kind != "bind" {
                     continue;
                 }
@@ -418,9 +472,8 @@ mod tests {
 
     #[test]
     fn dangerous_capabilities_are_refused() {
-        let result = run(
-            "services:\n  app:\n    image: nginx:1.27\n    cap_add:\n      - SYS_ADMIN\n",
-        );
+        let result =
+            run("services:\n  app:\n    image: nginx:1.27\n    cap_add:\n      - SYS_ADMIN\n");
         assert!(!result.is_safe());
         assert!(result.errors.iter().any(|e| e.contains("SYS_ADMIN")));
     }
@@ -469,16 +522,68 @@ mod tests {
     }
 
     #[test]
-    fn published_ports_are_refused_by_default() {
-        let result = run(
-            "services:\n  app:\n    image: nginx:1.27\n    ports:\n      - \"8080:80\"\n",
-        );
-        assert!(!result.is_safe());
-        assert!(result.errors.iter().any(|e| e.contains("publishes ports")));
+    fn ports_published_on_every_interface_are_refused_by_default() {
+        for spec in ["8080:80", "80", "0.0.0.0:8080:80"] {
+            let result = run(&format!(
+                "services:\n  app:\n    image: nginx:1.27\n    ports:\n      - \"{spec}\"\n"
+            ));
+            assert!(!result.is_safe(), "`{spec}` should be refused");
+            assert!(
+                result
+                    .errors
+                    .iter()
+                    .any(|e| e.contains("every network interface"))
+            );
+        }
     }
 
     #[test]
-    fn published_ports_can_be_opted_into() {
+    fn ports_bound_to_loopback_are_accepted() {
+        for spec in [
+            "127.0.0.1:15432:5432",
+            "127.0.0.1:18080:80/tcp",
+            "[::1]:18080:80",
+        ] {
+            let result = run(&format!(
+                "services:\n  app:\n    image: nginx:1.27\n    ports:\n      - \"{spec}\"\n"
+            ));
+            assert!(
+                result.is_safe(),
+                "`{spec}` should be accepted: {:?}",
+                result.errors
+            );
+        }
+    }
+
+    #[test]
+    fn the_long_port_form_is_understood() {
+        let safe = run(
+            "services:\n  app:\n    image: nginx:1.27\n    ports:\n      - target: 80\n        published: 18080\n        host_ip: 127.0.0.1\n",
+        );
+        assert!(safe.is_safe(), "{:?}", safe.errors);
+
+        let unsafe_entry = run(
+            "services:\n  app:\n    image: nginx:1.27\n    ports:\n      - target: 80\n        published: 18080\n",
+        );
+        assert!(!unsafe_entry.is_safe());
+    }
+
+    #[test]
+    fn host_ips_are_extracted_from_the_short_form() {
+        assert_eq!(
+            host_ip_from_short_form("127.0.0.1:15432:5432").as_deref(),
+            Some("127.0.0.1")
+        );
+        assert_eq!(
+            host_ip_from_short_form("[::1]:8080:80").as_deref(),
+            Some("::1")
+        );
+        assert_eq!(host_ip_from_short_form("8080:80"), None);
+        assert_eq!(host_ip_from_short_form("80"), None);
+    }
+
+    #[test]
+    fn exposing_to_every_interface_can_be_opted_into() {
         let security = SecuritySpec {
             allow_published_ports: true,
             ..SecuritySpec::default()
@@ -493,7 +598,8 @@ mod tests {
 
     #[test]
     fn external_networks_are_refused_when_isolation_is_required() {
-        let text = "services:\n  app:\n    image: nginx:1.27\nnetworks:\n  prod:\n    external: true\n";
+        let text =
+            "services:\n  app:\n    image: nginx:1.27\nnetworks:\n  prod:\n    external: true\n";
         assert!(!run_with(text, &SecuritySpec::default(), true).is_safe());
         assert!(run_with(text, &SecuritySpec::default(), false).is_safe());
     }
@@ -508,7 +614,12 @@ mod tests {
     fn unpinned_images_are_warned_about() {
         let result = run("services:\n  app:\n    image: nginx\n");
         assert!(result.is_safe());
-        assert!(result.warnings.iter().any(|w| w.contains("pin an explicit tag")));
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.contains("pin an explicit tag"))
+        );
     }
 
     #[test]

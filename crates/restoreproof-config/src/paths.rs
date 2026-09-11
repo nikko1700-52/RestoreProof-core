@@ -161,7 +161,10 @@ impl PathPolicy {
         for name in remainder.iter().rev() {
             if *name == std::ffi::OsStr::new("..") || *name == std::ffi::OsStr::new(".") {
                 return Err(ConfigError::Unsafe {
-                    reason: format!("{field}: `{}` contains a relative component that cannot be resolved safely", raw.display()),
+                    reason: format!(
+                        "{field}: `{}` contains a relative component that cannot be resolved safely",
+                        raw.display()
+                    ),
                 });
             }
             result.push(name);
@@ -179,7 +182,12 @@ impl PathPolicy {
     }
 
     /// Enforce the confinement rule on an already canonical path.
-    fn confine(&self, field: &str, canonical: PathBuf, confinement: Confinement) -> Result<PathBuf> {
+    fn confine(
+        &self,
+        field: &str,
+        canonical: PathBuf,
+        confinement: Confinement,
+    ) -> Result<PathBuf> {
         if canonical.starts_with(&self.project_root) {
             return Ok(canonical);
         }
@@ -188,9 +196,10 @@ impl PathPolicy {
                 field: field.to_owned(),
                 path: canonical,
                 root: self.project_root.clone(),
-                extra: "\nThis field cannot be allowlisted: executable and orchestration files must \
+                extra:
+                    "\nThis field cannot be allowlisted: executable and orchestration files must \
                         live inside the project."
-                    .to_owned(),
+                        .to_owned(),
             }),
             Confinement::ProjectOrAllowlisted => {
                 if self
@@ -312,7 +321,11 @@ mod tests {
         std::os::unix::fs::symlink(f.outside.join("secret.txt"), f.root.join("link.txt")).unwrap();
         let policy = PathPolicy::new(&f.root, &[]).unwrap();
         let err = policy
-            .resolve_existing("checks_file", Path::new("link.txt"), Confinement::ProjectOnly)
+            .resolve_existing(
+                "checks_file",
+                Path::new("link.txt"),
+                Confinement::ProjectOnly,
+            )
             .unwrap_err();
         assert!(
             matches!(err, ConfigError::PathEscapesProject { .. }),
@@ -353,7 +366,11 @@ mod tests {
         let f = fixture();
         let policy = PathPolicy::new(&f.root, &[]).unwrap();
         let err = policy
-            .resolve_existing("checks_file", Path::new("nope.yaml"), Confinement::ProjectOnly)
+            .resolve_existing(
+                "checks_file",
+                Path::new("nope.yaml"),
+                Confinement::ProjectOnly,
+            )
             .unwrap_err();
         match err {
             ConfigError::MissingPath { field, .. } => assert_eq!(field, "checks_file"),

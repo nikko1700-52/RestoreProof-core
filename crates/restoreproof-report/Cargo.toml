@@ -1,5 +1,6 @@
 [package]
 name = "restoreproof-report"
+description = "Report rendering for RestoreProof: JSON, Markdown and terminal output."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,3 +13,10 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
+restoreproof-core.workspace = true
+chrono.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

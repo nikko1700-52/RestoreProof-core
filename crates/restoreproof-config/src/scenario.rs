@@ -193,7 +193,11 @@ impl Scenario {
         let mut issues: Vec<ValidationIssue> = Vec::new();
         let mut warnings: Vec<String> = Vec::new();
 
-        check(&mut issues, "project.name", validate_identifier("project.name", &raw.project.name));
+        check(
+            &mut issues,
+            "project.name",
+            validate_identifier("project.name", &raw.project.name),
+        );
         if let Some(name) = &raw.recovery.project_name {
             check(
                 &mut issues,
@@ -263,7 +267,10 @@ impl Scenario {
                             compose_audit = result;
                         }
                         Err(err) => {
-                            issues.push(ValidationIssue::new("recovery.compose_file", err.to_string()));
+                            issues.push(ValidationIssue::new(
+                                "recovery.compose_file",
+                                err.to_string(),
+                            ));
                         }
                     }
                 }
@@ -300,7 +307,14 @@ impl Scenario {
             match std::fs::read_to_string(checks_file) {
                 Ok(checks_text) => match ChecksDocument::from_yaml(checks_file, &checks_text) {
                     Ok(document) => {
-                        validate_checks(&document, &raw, &policy, &compose_audit, &mut issues, &mut warnings);
+                        validate_checks(
+                            &document,
+                            &raw,
+                            &policy,
+                            &compose_audit,
+                            &mut issues,
+                            &mut warnings,
+                        );
                         checks = document;
                     }
                     Err(err) => issues.push(ValidationIssue::new("checks_file", err.to_string())),
@@ -402,7 +416,11 @@ impl Scenario {
     /// Checks that will actually run, in order.
     #[must_use]
     pub fn enabled_checks(&self) -> Vec<&CheckSpec> {
-        self.checks.checks.iter().filter(|check| check.enabled).collect()
+        self.checks
+            .checks
+            .iter()
+            .filter(|check| check.enabled)
+            .collect()
     }
 
     /// Report formats requested.
@@ -416,8 +434,14 @@ fn validate_timeouts(raw: &RawConfig, issues: &mut Vec<ValidationIssue>) {
     const MAX_TIMEOUT: u64 = 24 * 3600;
 
     for (field, value) in [
-        ("recovery.startup_timeout_seconds", raw.recovery.startup_timeout_seconds),
-        ("recovery.total_timeout_seconds", raw.recovery.total_timeout_seconds),
+        (
+            "recovery.startup_timeout_seconds",
+            raw.recovery.startup_timeout_seconds,
+        ),
+        (
+            "recovery.total_timeout_seconds",
+            raw.recovery.total_timeout_seconds,
+        ),
     ] {
         if value == 0 {
             issues.push(ValidationIssue::new(field, "must be greater than zero"));
@@ -535,7 +559,8 @@ fn validate_check_kind(
                     &format!("{field}.url"),
                     &http.url,
                     raw.security.allow_external_http_targets,
-                ).map(|_| ()),
+                )
+                .map(|_| ()),
             );
             if !(100..=599).contains(&http.expected_status) {
                 issues.push(ValidationIssue::new(
@@ -609,7 +634,11 @@ fn validate_check_kind(
                     issues,
                     field,
                     policy
-                        .resolve_existing(&format!("{field}.workdir"), workdir, Confinement::ProjectOnly)
+                        .resolve_existing(
+                            &format!("{field}.workdir"),
+                            workdir,
+                            Confinement::ProjectOnly,
+                        )
                         .map(|_| ()),
                 );
             }
@@ -627,7 +656,11 @@ fn validate_check_kind(
                 field,
                 validate_env_header(&format!("{field}.dsn_env"), "dsn", &sql.dsn_env),
             );
-            check(issues, field, ensure_read_only(&format!("{field}.query"), &sql.query));
+            check(
+                issues,
+                field,
+                ensure_read_only(&format!("{field}.query"), &sql.query),
+            );
             if let (Some(min), Some(max)) = (sql.min_rows, sql.max_rows)
                 && min > max
             {
@@ -734,12 +767,6 @@ fn validate_check_kind(
                     "only meaningful with `state: exited`",
                 ));
             }
-            if container.port.is_some() && !raw.security.allow_published_ports {
-                issues.push(ValidationIssue::new(
-                    format!("{field}.port"),
-                    "checking a published port requires `security.allow_published_ports: true`",
-                ));
-            }
         }
         CheckKind::Script(script) => {
             let resolved = policy.resolve_existing(
@@ -764,7 +791,11 @@ fn validate_check_kind(
                     issues,
                     field,
                     policy
-                        .resolve_existing(&format!("{field}.workdir"), workdir, Confinement::ProjectOnly)
+                        .resolve_existing(
+                            &format!("{field}.workdir"),
+                            workdir,
+                            Confinement::ProjectOnly,
+                        )
                         .map(|_| ()),
                 );
             }

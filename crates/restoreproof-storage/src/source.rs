@@ -139,7 +139,10 @@ pub enum ResolvedSecret {
 }
 
 /// Read a configured secret, registering it for redaction when it is a value.
-fn resolve_secret(source: Option<&SecretSource>, redactor: &mut Redactor) -> Result<ResolvedSecret> {
+fn resolve_secret(
+    source: Option<&SecretSource>,
+    redactor: &mut Redactor,
+) -> Result<ResolvedSecret> {
     match source {
         None => Ok(ResolvedSecret::None),
         Some(SecretSource::File(path)) => {
@@ -232,9 +235,13 @@ mod tests {
         let path = dir.path().join("password");
         fs::write(&path, "super-secret-value\n").unwrap();
         let mut redactor = Redactor::new();
-        let resolved = resolve_secret(Some(&SecretSource::File(path.clone())), &mut redactor).unwrap();
+        let resolved =
+            resolve_secret(Some(&SecretSource::File(path.clone())), &mut redactor).unwrap();
         assert!(matches!(resolved, ResolvedSecret::File(_)));
-        assert_eq!(redactor.redact("leak: super-secret-value"), "leak: [REDACTED]");
+        assert_eq!(
+            redactor.redact("leak: super-secret-value"),
+            "leak: [REDACTED]"
+        );
     }
 
     #[test]

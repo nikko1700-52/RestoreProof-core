@@ -96,7 +96,10 @@ impl ResticSource {
 
     /// Resolve the configured selector to a concrete snapshot.
     async fn resolve_snapshot(&self) -> Result<ResticSnapshot> {
-        let mut spec = self.command(self.limits.inspect_timeout).arg("snapshots").arg("--json");
+        let mut spec = self
+            .command(self.limits.inspect_timeout)
+            .arg("snapshots")
+            .arg("--json");
         if self.snapshot == "latest" {
             spec = spec.args(["--latest", "1"]);
         } else {
@@ -117,9 +120,11 @@ impl ResticSource {
         }
 
         let snapshots: Vec<ResticSnapshot> =
-            serde_json::from_str(output.stdout.trim()).map_err(|err| StorageError::UnexpectedOutput {
-                tool: TOOL.to_owned(),
-                details: format!("expected a JSON array of snapshots: {err}"),
+            serde_json::from_str(output.stdout.trim()).map_err(|err| {
+                StorageError::UnexpectedOutput {
+                    tool: TOOL.to_owned(),
+                    details: format!("expected a JSON array of snapshots: {err}"),
+                }
             })?;
 
         snapshots.into_iter().next_back().ok_or_else(|| {
@@ -191,7 +196,13 @@ impl BackupSource for ResticSource {
         }
 
         let bytes = directory_size(destination).ok();
-        let mut log: Vec<String> = output.stdout.lines().rev().take(5).map(str::to_owned).collect();
+        let mut log: Vec<String> = output
+            .stdout
+            .lines()
+            .rev()
+            .take(5)
+            .map(str::to_owned)
+            .collect();
         log.reverse();
 
         Ok(RestoreOutcome {
@@ -223,7 +234,10 @@ mod tests {
         let secret = ResolvedSecret::Value(restoreproof_core::Secret::new("hunter2-secret"));
         let spec = source(secret).command(std::time::Duration::from_secs(5));
         let rendered = spec.display_args().join(" ");
-        assert!(!rendered.contains("hunter2"), "secret leaked into argv: {rendered}");
+        assert!(
+            !rendered.contains("hunter2"),
+            "secret leaked into argv: {rendered}"
+        );
     }
 
     #[test]
@@ -234,11 +248,15 @@ mod tests {
 
     #[test]
     fn snapshot_json_is_parsed() {
-        let json = r#"[{"time":"2026-01-15T08:00:00.123456Z","id":"aabbccddeeff","short_id":"aabbccdd"}]"#;
+        let json =
+            r#"[{"time":"2026-01-15T08:00:00.123456Z","id":"aabbccddeeff","short_id":"aabbccdd"}]"#;
         let snapshots: Vec<ResticSnapshot> = serde_json::from_str(json).unwrap();
         let snapshot = snapshots.into_iter().next().unwrap();
         assert_eq!(snapshot.short_id.as_deref(), Some("aabbccdd"));
-        assert_eq!(snapshot.time.to_rfc3339(), "2026-01-15T08:00:00.123456+00:00");
+        assert_eq!(
+            snapshot.time.to_rfc3339(),
+            "2026-01-15T08:00:00.123456+00:00"
+        );
     }
 
     #[tokio::test]

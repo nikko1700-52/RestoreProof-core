@@ -131,7 +131,9 @@ pub fn validate_env_entry(field: &str, key: &str, value: &str) -> Result<()> {
     }
     if key.starts_with("RESTOREPROOF_") {
         return Err(ConfigError::Unsafe {
-            reason: format!("{field}: the `RESTOREPROOF_` prefix is reserved for injected variables"),
+            reason: format!(
+                "{field}: the `RESTOREPROOF_` prefix is reserved for injected variables"
+            ),
         });
     }
     if value.contains('\0') {

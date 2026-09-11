@@ -23,9 +23,15 @@ pub(crate) fn as_mapping<E: DeError>(context: &str, value: Value) -> Result<Mapp
 }
 
 /// Remove and return a string-valued key, failing with a helpful message.
-pub(crate) fn take_tag<E: DeError>(context: &str, mapping: &mut Mapping, key: &str) -> Result<String, E> {
+pub(crate) fn take_tag<E: DeError>(
+    context: &str,
+    mapping: &mut Mapping,
+    key: &str,
+) -> Result<String, E> {
     let Some(value) = mapping.remove(Value::String(key.to_owned())) else {
-        return Err(E::custom(format!("{context}: missing required field `{key}`")));
+        return Err(E::custom(format!(
+            "{context}: missing required field `{key}`"
+        )));
     };
     match value {
         Value::String(tag) => Ok(tag),
@@ -67,7 +73,10 @@ pub(crate) fn take_optional<T: DeserializeOwned, E: DeError>(
 }
 
 /// Deserialize the remainder of a mapping into a strict struct.
-pub(crate) fn from_mapping<T: DeserializeOwned, E: DeError>(context: &str, mapping: Mapping) -> Result<T, E> {
+pub(crate) fn from_mapping<T: DeserializeOwned, E: DeError>(
+    context: &str,
+    mapping: Mapping,
+) -> Result<T, E> {
     T::deserialize(Value::Mapping(mapping)).map_err(|err| E::custom(format!("{context}: {err}")))
 }
 

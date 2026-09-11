@@ -47,7 +47,8 @@ impl Redactor {
             return;
         }
         self.secrets.push(trimmed.to_owned());
-        self.secrets.sort_by(|a, b| b.len().cmp(&a.len()).then_with(|| a.cmp(b)));
+        self.secrets
+            .sort_by(|a, b| b.len().cmp(&a.len()).then_with(|| a.cmp(b)));
     }
 
     /// Number of registered secrets. Used by tests and by `--verbose` output.
@@ -87,8 +88,12 @@ pub fn scrub_url_credentials(input: &str) -> String {
     let mut rest = input;
 
     while let Some(pos) = rest.find("://") {
-        let Some(head) = rest.get(..pos + 3) else { break };
-        let Some(tail) = rest.get(pos + 3..) else { break };
+        let Some(head) = rest.get(..pos + 3) else {
+            break;
+        };
+        let Some(tail) = rest.get(pos + 3..) else {
+            break;
+        };
         out.push_str(head);
 
         let auth_end = tail.find(AUTHORITY_TERMINATORS).unwrap_or(tail.len());

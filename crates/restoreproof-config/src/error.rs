@@ -51,7 +51,9 @@ pub enum ConfigError {
     },
 
     /// The `version:` field is not supported by this build.
-    #[error("unsupported configuration version {found} in `{path}` (this build supports {supported})")]
+    #[error(
+        "unsupported configuration version {found} in `{path}` (this build supports {supported})"
+    )]
     UnsupportedVersion {
         /// File carrying the version.
         path: PathBuf,

@@ -151,9 +151,10 @@ fn strip(query: &str) -> Result<Stripped> {
                 }
                 (';', _) => {
                     // A trailing separator is tolerated; anything after it is not.
-                    if chars.get(index + 1..).is_some_and(|rest| {
-                        rest.iter().any(|c| !c.is_whitespace())
-                    }) {
+                    if chars
+                        .get(index + 1..)
+                        .is_some_and(|rest| rest.iter().any(|c| !c.is_whitespace()))
+                    {
                         has_separator = true;
                     }
                     index += 1;
@@ -285,7 +286,10 @@ pub fn ensure_read_only(field: &str, query: &str) -> Result<()> {
         });
     }
 
-    if let Some(denied) = tokens.iter().find(|token| DENIED_KEYWORDS.contains(&token.as_str())) {
+    if let Some(denied) = tokens
+        .iter()
+        .find(|token| DENIED_KEYWORDS.contains(&token.as_str()))
+    {
         return Err(ConfigError::Unsafe {
             reason: format!(
                 "{field}: the query contains the keyword `{denied}`, which is refused because it can \
@@ -357,7 +361,9 @@ mod tests {
     fn comment_smuggling_is_refused() {
         assert!(!ok("SELECT 1 -- harmless\n; DROP TABLE orders"));
         assert!(!ok("SELECT /* hidden */ 1; DELETE FROM t"));
-        assert!(!ok("SELECT 1 /* nested /* comment */ still hidden */ ; DROP TABLE t"));
+        assert!(!ok(
+            "SELECT 1 /* nested /* comment */ still hidden */ ; DROP TABLE t"
+        ));
     }
 
     #[test]
@@ -397,13 +403,17 @@ mod tests {
     #[test]
     fn session_mutation_is_refused() {
         assert!(!ok("SET statement_timeout = 0"));
-        assert!(!ok("SELECT 1 FROM t WHERE x = (SELECT set_config('a','b',false))"));
+        assert!(!ok(
+            "SELECT 1 FROM t WHERE x = (SELECT set_config('a','b',false))"
+        ));
         assert!(!ok("SELECT current_setting('data_directory')"));
     }
 
     #[test]
     fn backend_manipulation_is_refused() {
-        assert!(!ok("SELECT pg_terminate_backend(pid) FROM pg_stat_activity"));
+        assert!(!ok(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity"
+        ));
         assert!(!ok("SELECT pg_advisory_lock(1)"));
     }
 

@@ -184,7 +184,10 @@ mod tests {
             "https://[::1]:8443/status",
             "http://127.5.5.5/health",
         ] {
-            assert!(validate_url("u", raw, false).is_ok(), "{raw} should be accepted");
+            assert!(
+                validate_url("u", raw, false).is_ok(),
+                "{raw} should be accepted"
+            );
         }
     }
 
@@ -220,7 +223,10 @@ mod tests {
     #[test]
     fn credential_headers_must_come_from_the_environment() {
         for name in ["Authorization", "cookie", "X-API-Key"] {
-            assert!(validate_literal_header("h", name, "value").is_err(), "{name}");
+            assert!(
+                validate_literal_header("h", name, "value").is_err(),
+                "{name}"
+            );
         }
         assert!(validate_env_header("h", "Authorization", "APP_TOKEN").is_ok());
     }
