@@ -213,6 +213,21 @@ the digest.
 Note what this does and does not prove: it detects accidental modification. It
 is not a signature, and anyone who can edit the report can recompute the digest.
 
+## A drill works by hand but not from cron or systemd
+
+Almost always the environment. Checks start from an empty environment, and so
+does the tool: `DOCKER_HOST` and credentials come from the operator's
+environment, which a scheduler does not have.
+
+* put credentials in an `EnvironmentFile` readable only by the drill user;
+* if Docker is rootless, `DOCKER_HOST` and `XDG_RUNTIME_DIR` must be set for the
+  service;
+* do not set `PrivateTmp=true`: the restored data lives under `/tmp` and is
+  bind-mounted into containers started by the *host's* daemon, which cannot see
+  a private tmpfs.
+
+See [operations.md](operations.md) for a working unit file.
+
 ## Still stuck
 
 Open an issue with:

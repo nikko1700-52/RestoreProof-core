@@ -189,6 +189,7 @@ unchanged. See [docs/architecture.md](docs/architecture.md).
 * [Getting started](docs/getting-started.md)
 * [Configuration reference](docs/configuration.md)
 * [Check types](docs/checks.md)
+* [Running drills in production](docs/operations.md) — scheduling, retention, alerting
 * [Security](docs/security.md)
 * [Architecture](docs/architecture.md)
 * [Troubleshooting](docs/troubleshooting.md)
@@ -223,6 +224,14 @@ Worth knowing before you rely on it:
 * BorgBackup support is experimental, and the restic example is not exercised
   by CI (CI does not install restic).
 * Tested on Linux (Debian/Ubuntu). Other platforms are unverified.
+
+## Running it for real
+
+A drill you run by hand once proves the procedure. A drill that runs every night
+proves the backups. [docs/operations.md](docs/operations.md) covers the second:
+systemd timers, where reports go and for how long, alert rules that also fire
+when the drill goes *silent*, and a checklist to work through before trusting
+any of it — starting with "make it fail on purpose and confirm it goes red".
 
 ## Contributing
 

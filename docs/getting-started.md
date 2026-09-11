@@ -234,6 +234,7 @@ recorded one. It detects accidental modification; it is not a signature.
 * [Configuration reference](configuration.md)
 * [Check types](checks.md)
 * [Security](security.md)
+* [Running drills in production](operations.md)
 * [Troubleshooting](troubleshooting.md)
 
 ## Shell completion
