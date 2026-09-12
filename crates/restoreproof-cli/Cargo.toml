@@ -8,6 +8,8 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+keywords = ["backup", "disaster-recovery", "restore", "devops", "sre"]
+categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]
 name = "restoreproof"

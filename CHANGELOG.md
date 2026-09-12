@@ -12,7 +12,7 @@ schema. The **exit codes** are already treated as a stable contract.
 
 Nothing yet.
 
-## [0.1.0] — 2026-09-11
+## [0.1.0] — 2026-09-12
 
 First release. Early-stage software: suitable for local and CI recovery drills,
 not a replacement for a backup platform.

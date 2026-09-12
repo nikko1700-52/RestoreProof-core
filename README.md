@@ -23,58 +23,117 @@ closes.
 
 ## What a run looks like
 
+A drill that passes, then the same drill against a backup with a table missing
+from it:
+
+![A recovery drill: the first run passes, the second fails because the invoices table is not in the backup, and exits 1](docs/demo.svg)
+
+<details>
+<summary>The same two runs as text</summary>
+
 ```console
-$ export RESTOREPROOF_DEMO_DATABASE_URL='postgres://restoreproof:restoreproof-local-drill@127.0.0.1:15432/app'
 $ restoreproof run --config examples/postgres-local/restoreproof.yaml
 
-PASS PASSED  postgres-local · 2026-09-11 15:03:29Z · 4.9 s
+PASS PASSED  postgres-local · 2026-09-12 13:22:40Z · 4.5 s
 
   ok   The dump was restored to di…     0 ms  `dump.sql` is present (806 bytes)
-  ok   PostgreSQL reports healthy     108 ms  service `database` is running and healthy
-  ok   The orders table contains d…    78 ms  query returned 1 row(s) as expected
-  ok   The customers table contain…    70 ms  query returned 1 row(s) as expected
-  ok   The most recent order came …    74 ms  query returned 1 row(s) as expected
+  ok   PostgreSQL reports healthy      76 ms  service `database` is running and healthy
+  ok   The orders table contains d…    10 ms  query returned 1 row(s) as expected
+  ok   The customers table contain…     9 ms  query returned 1 row(s) as expected
+  ok   The most recent order came …    10 ms  query returned 1 row(s) as expected
 
   Checks   5 passed, 0 failed, 0 error, 0 skipped (of 5)
-  RTO      4.3 s (target 10m 00s)  RTO_PASS
-  RPO      12m 58s (target 24h 00m 00s)  RPO_PASS
+  RTO      4.1 s (target 10m 00s)  RTO_PASS
+  RPO      17h 46m 04s (target 24h 00m 00s)  RPO_PASS
   Backup   local · unknown snapshot · 806 B
+  warning: backup.metadata_file is not set: the backup timestamp will be derived from file modification times, which is an approximation
+  warning: the backup timestamp was derived from file modification times, not from backup metadata; it is an approximation
 
-  Report   examples/postgres-local/reports/20260911T150329Z-postgres-local-45efee6c.json
-  Report   examples/postgres-local/reports/20260911T150329Z-postgres-local-45efee6c.md
+  Report   examples/postgres-local/reports/20260912T132240Z-postgres-local-b26125b0.json
+  Report   examples/postgres-local/reports/20260912T132240Z-postgres-local-b26125b0.md
+  Report   examples/postgres-local/reports/20260912T132240Z-postgres-local-b26125b0.junit.xml
+  Report   examples/postgres-local/reports/20260912T132240Z-postgres-local-b26125b0.prom
 ```
 
-<sub>Real output from `examples/postgres-local`, warnings elided. A recorded
-terminal session belongs here; adding one is tracked in
-[ROADMAP.md](ROADMAP.md).</sub>
+```console
+$ restoreproof run --config examples/postgres-local/restoreproof.failing.yaml
+
+FAIL FAILED  postgres-local-failing · 2026-09-12 13:22:44Z · 4.3 s
+
+  ok   PostgreSQL reports healthy      75 ms  service `database` is running and healthy
+  fail The invoices table contains…     9 ms  the recovered database rejected the query: error returned from database: relation "invoices" does not exist
+
+  Checks   1 passed, 1 failed, 0 error, 0 skipped (of 2)
+  RTO      — (target 10m 00s)  RTO_UNKNOWN
+  RPO      17h 46m 08s (target 24h 00m 00s)  RPO_PASS
+  Backup   local · unknown snapshot · 806 B
+  warning: backup.metadata_file is not set: the backup timestamp will be derived from file modification times, which is an approximation
+  warning: the backup timestamp was derived from file modification times, not from backup metadata; it is an approximation
+
+  Report   examples/postgres-local/reports/20260912T132244Z-postgres-local-failing-176fb71f.json
+  Report   examples/postgres-local/reports/20260912T132244Z-postgres-local-failing-176fb71f.md
+
+error: drill finished with status FAILED (exit code 1)
+```
+
+</details>
+
+<sub>Real output from `examples/postgres-local`, with the report paths
+shortened. The recording is generated from the same two runs; neither is
+staged.</sub>
 
 Exit code `0` means every required check passed. Exit code `1` means your
 recovery does not work — which is the answer you actually wanted to know.
 
-## Try it in three commands
+## Install
 
-You need Rust and Docker with the Compose v2 plugin.
+One static binary. Linux, x86-64 or arm64:
+
+```bash
+curl -fsSL https://github.com/nikko1700-52/RestoreProof-core/releases/latest/download/restoreproof-x86_64-unknown-linux-gnu.tar.gz \
+  | tar -xz --strip-components=1 --wildcards '*/restoreproof'
+sudo install -m 0755 restoreproof /usr/local/bin/
+restoreproof version
+```
+
+Every release carries a `SHA256SUMS` file; check it before you install if the
+machine matters. Replace `x86_64` with `aarch64` for arm64.
+
+<details>
+<summary>Or build it yourself (Rust 1.85 or later)</summary>
+
+```bash
+git clone https://github.com/nikko1700-52/RestoreProof-core
+cd RestoreProof-core
+cargo build --release   # target/release/restoreproof
+```
+
+</details>
+
+Drills run containers, so you also need Docker with the Compose v2 plugin.
+
+## Try it in three commands
 
 ```bash
 git clone https://github.com/nikko1700-52/RestoreProof-core
 cd RestoreProof-core
 
 export RESTOREPROOF_DEMO_DATABASE_URL='postgres://restoreproof:restoreproof-local-drill@127.0.0.1:15432/app'
-cargo run -- run --config examples/postgres-local/restoreproof.yaml
+restoreproof run --config examples/postgres-local/restoreproof.yaml
 ```
 
 Then watch it catch a real failure:
 
 ```bash
-cargo run -- run --config examples/postgres-local/restoreproof.failing.yaml
+restoreproof run --config examples/postgres-local/restoreproof.failing.yaml
 # FAILED, exit code 1: the invoices table is not in the backup
 ```
 
 To start from scratch on your own project:
 
 ```bash
-cargo run -- init my-drill
-cargo run -- plan --config my-drill/restoreproof.yaml
+restoreproof init my-drill
+restoreproof plan --config my-drill/restoreproof.yaml
 ```
 
 ## What it checks

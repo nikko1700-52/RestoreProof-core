@@ -8,6 +8,8 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+keywords = ["backup", "disaster-recovery", "reporting", "prometheus"]
+categories = ["development-tools::testing"]
 
 [lints]
 workspace = true

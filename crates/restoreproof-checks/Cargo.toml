@@ -8,6 +8,8 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+keywords = ["backup", "disaster-recovery", "testing", "postgresql"]
+categories = ["development-tools::testing"]
 
 [lints]
 workspace = true

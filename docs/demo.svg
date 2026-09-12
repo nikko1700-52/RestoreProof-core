@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RestoreProof — a recovery drill, passing and then failing on purpose.
+  Every line is real output from examples/postgres-local; only paths and
+  two long messages are shortened to fit. No script, no external asset.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 796 528" width="796" height="528" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" role="img" aria-label="A RestoreProof recovery drill: the first run passes, the second fails because a table is missing from the backup, and exits 1.">
+<style>
+  .bg{fill:#0f131a}.bar{fill:#171c25}
+  text{dominant-baseline:middle;white-space:pre}
+  .prompt{fill:#7aa2f7}.cmd{fill:#e8ecf4}.bright{fill:#e8ecf4;font-weight:600}
+  .text{fill:#c3cad6}.dim{fill:#6f7b8d}.good{fill:#6cc788}.bad{fill:#f0736a}
+  .pass-badge{fill:#0f131a}.fail-badge{fill:#0f131a}
+  .cursor{fill:#7aa2f7;animation:blink 1.06s steps(1) infinite}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .ln{opacity:0}
+  @media (prefers-reduced-motion: reduce){
+    .ln{opacity:1;animation:none}.cursor{animation:none}
+  }
+  .l0{animation:a0 9.52s infinite}@keyframes a0{0%,4.202%{opacity:0}4.352%,97%{opacity:1}100%{opacity:0}}
+  .l1{animation:a1 9.52s infinite}@keyframes a1{0%,8.929%{opacity:0}9.079%,97%{opacity:1}100%{opacity:0}}
+  .l2{animation:a2 9.52s infinite}@keyframes a2{0%,8.929%{opacity:0}9.079%,97%{opacity:1}100%{opacity:0}}
+  .l3{animation:a3 9.52s infinite}@keyframes a3{0%,11.870%{opacity:0}12.020%,97%{opacity:1}100%{opacity:0}}
+  .l4{animation:a4 9.52s infinite}@keyframes a4{0%,11.870%{opacity:0}12.020%,97%{opacity:1}100%{opacity:0}}
+  .l5{animation:a5 9.52s infinite}@keyframes a5{0%,14.811%{opacity:0}14.961%,97%{opacity:1}100%{opacity:0}}
+  .l6{animation:a6 9.52s infinite}@keyframes a6{0%,17.752%{opacity:0}17.902%,97%{opacity:1}100%{opacity:0}}
+  .l7{animation:a7 9.52s infinite}@keyframes a7{0%,20.693%{opacity:0}20.843%,97%{opacity:1}100%{opacity:0}}
+  .l8{animation:a8 9.52s infinite}@keyframes a8{0%,23.634%{opacity:0}23.784%,97%{opacity:1}100%{opacity:0}}
+  .l9{animation:a9 9.52s infinite}@keyframes a9{0%,26.576%{opacity:0}26.726%,97%{opacity:1}100%{opacity:0}}
+  .l10{animation:a10 9.52s infinite}@keyframes a10{0%,26.576%{opacity:0}26.726%,97%{opacity:1}100%{opacity:0}}
+  .l11{animation:a11 9.52s infinite}@keyframes a11{0%,29.517%{opacity:0}29.667%,97%{opacity:1}100%{opacity:0}}
+  .l12{animation:a12 9.52s infinite}@keyframes a12{0%,32.458%{opacity:0}32.608%,97%{opacity:1}100%{opacity:0}}
+  .l13{animation:a13 9.52s infinite}@keyframes a13{0%,35.399%{opacity:0}35.549%,97%{opacity:1}100%{opacity:0}}
+  .l14{animation:a14 9.52s infinite}@keyframes a14{0%,46.954%{opacity:0}47.104%,97%{opacity:1}100%{opacity:0}}
+  .l15{animation:a15 9.52s infinite}@keyframes a15{0%,51.681%{opacity:0}51.831%,97%{opacity:1}100%{opacity:0}}
+  .l16{animation:a16 9.52s infinite}@keyframes a16{0%,51.681%{opacity:0}51.831%,97%{opacity:1}100%{opacity:0}}
+  .l17{animation:a17 9.52s infinite}@keyframes a17{0%,54.622%{opacity:0}54.772%,97%{opacity:1}100%{opacity:0}}
+  .l18{animation:a18 9.52s infinite}@keyframes a18{0%,54.622%{opacity:0}54.772%,97%{opacity:1}100%{opacity:0}}
+  .l19{animation:a19 9.52s infinite}@keyframes a19{0%,57.563%{opacity:0}57.713%,97%{opacity:1}100%{opacity:0}}
+  .l20{animation:a20 9.52s infinite}@keyframes a20{0%,60.504%{opacity:0}60.654%,97%{opacity:1}100%{opacity:0}}
+  .l21{animation:a21 9.52s infinite}@keyframes a21{0%,60.504%{opacity:0}60.654%,97%{opacity:1}100%{opacity:0}}
+  .l22{animation:a22 9.52s infinite}@keyframes a22{0%,63.445%{opacity:0}63.595%,97%{opacity:1}100%{opacity:0}}
+  .l23{animation:a23 9.52s infinite}@keyframes a23{0%,63.445%{opacity:0}63.595%,97%{opacity:1}100%{opacity:0}}
+</style>
+<rect class="bg" width="796" height="528" rx="9"/>
+<rect class="bar" width="796" height="30" rx="9"/>
+<rect class="bar" y="20" width="796" height="10"/>
+<circle cx="20" cy="15" r="5" fill="#f0736a"/>
+<circle cx="37" cy="15" r="5" fill="#e0c068"/>
+<circle cx="54" cy="15" r="5" fill="#6cc788"/>
+<text x="398.0" y="15" text-anchor="middle" class="dim" font-size="11">restoreproof</text>
+<g class="ln l0"><text x="22.0" y="55.5" class="prompt">$ </text><text x="37.6" y="55.5" class="cmd">restoreproof run --config examples/postgres-local/restoreproof.yaml</text><rect class="cursor" x="561.6" y="48.5" width="7.5" height="14"/></g>
+<g class="ln l2"><rect x="22.0" y="84.5" width="43.3" height="18" rx="4" fill="#6cc788"/><text x="28.0" y="93.5" class="pass-badge" font-weight="700">PASS</text><text x="65.3" y="93.5" class="bright">  PASSED  postgres-local · 4.5 s</text></g>
+<g class="ln l4"><text x="22.0" y="131.5" class="good">  ok   </text><text x="76.7" y="131.5" class="dim">The dump was restored to di…     0 ms  </text><text x="381.7" y="131.5" class="text">`dump.sql` is present (806 bytes)</text></g>
+<g class="ln l5"><text x="22.0" y="150.5" class="good">  ok   </text><text x="76.7" y="150.5" class="dim">PostgreSQL reports healthy      76 ms  </text><text x="381.7" y="150.5" class="text">service `database` is running and healthy</text></g>
+<g class="ln l6"><text x="22.0" y="169.5" class="good">  ok   </text><text x="76.7" y="169.5" class="dim">The orders table contains d…    10 ms  </text><text x="381.7" y="169.5" class="text">query returned 1 row(s) as expected</text></g>
+<g class="ln l7"><text x="22.0" y="188.5" class="good">  ok   </text><text x="76.7" y="188.5" class="dim">The customers table contain…     9 ms  </text><text x="381.7" y="188.5" class="text">query returned 1 row(s) as expected</text></g>
+<g class="ln l8"><text x="22.0" y="207.5" class="good">  ok   </text><text x="76.7" y="207.5" class="dim">The most recent order came …    10 ms  </text><text x="381.7" y="207.5" class="text">query returned 1 row(s) as expected</text></g>
+<g class="ln l10"><text x="22.0" y="245.5" class="dim">  Checks   </text><text x="108.0" y="245.5" class="text">5 passed, 0 failed, 0 error, 0 skipped (of 5)</text></g>
+<g class="ln l11"><text x="22.0" y="264.5" class="dim">  RTO      </text><text x="108.0" y="264.5" class="text">4.1 s (target 10m 00s)  </text><text x="295.7" y="264.5" class="good">RTO_PASS</text></g>
+<g class="ln l12"><text x="22.0" y="283.5" class="dim">  RPO      </text><text x="108.0" y="283.5" class="text">17h 46m (target 24h 00m)  </text><text x="311.3" y="283.5" class="good">RPO_PASS</text></g>
+<g class="ln l14"><text x="22.0" y="321.5" class="prompt">$ </text><text x="37.6" y="321.5" class="cmd">restoreproof run --config examples/postgres-local/restoreproof.failing.yaml</text><rect class="cursor" x="624.1" y="314.5" width="7.5" height="14"/></g>
+<g class="ln l16"><rect x="22.0" y="350.5" width="43.3" height="18" rx="4" fill="#f0736a"/><text x="28.0" y="359.5" class="fail-badge" font-weight="700">FAIL</text><text x="65.3" y="359.5" class="bright">  FAILED  postgres-local-failing · 4.3 s</text></g>
+<g class="ln l18"><text x="22.0" y="397.5" class="good">  ok   </text><text x="76.7" y="397.5" class="dim">PostgreSQL reports healthy      75 ms  </text><text x="381.7" y="397.5" class="text">service `database` is running and healthy</text></g>
+<g class="ln l19"><text x="22.0" y="416.5" class="bad">  fail </text><text x="76.7" y="416.5" class="dim">The invoices table contains…     9 ms  </text><text x="381.7" y="416.5" class="text">relation &quot;invoices&quot; does not exist</text></g>
+<g class="ln l21"><text x="22.0" y="454.5" class="dim">  Checks   </text><text x="108.0" y="454.5" class="text">1 passed, </text><text x="186.2" y="454.5" class="bad">1 failed</text><text x="248.8" y="454.5" class="text">, 0 error, 0 skipped (of 2)</text></g>
+<g class="ln l23"><text x="22.0" y="492.5" class="bad">error: drill finished with status FAILED (exit code 1)</text></g>
+</svg>

@@ -39,12 +39,17 @@ jobs:
 
       - name: Package
         run: |
-          name="restoreproof-${{ github.ref_name }}-${{ matrix.target }}"
-          mkdir -p "dist/$name"
-          cp "target/${{ matrix.target }}/release/restoreproof" "dist/$name/"
-          cp README.md LICENSE SECURITY.md CHANGELOG.md "dist/$name/"
-          tar -czf "dist/$name.tar.gz" -C dist "$name"
-          ( cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256" )
+          # The directory inside carries the version, for provenance once it is
+          # unpacked. The asset does not: a fixed name is what makes the
+          # `releases/latest/download/...` URL in the README work at every
+          # release instead of rotting at the next one.
+          inner="restoreproof-${{ github.ref_name }}-${{ matrix.target }}"
+          asset="restoreproof-${{ matrix.target }}"
+          mkdir -p "dist/$inner"
+          cp "target/${{ matrix.target }}/release/restoreproof" "dist/$inner/"
+          cp README.md LICENSE SECURITY.md CHANGELOG.md "dist/$inner/"
+          tar -czf "dist/$asset.tar.gz" -C dist "$inner"
+          ( cd dist && sha256sum "$asset.tar.gz" > "$asset.tar.gz.sha256" )
 
       - uses: actions/upload-artifact@v4
         with:
@@ -81,3 +86,6 @@ jobs:
             ```bash
             sha256sum --check SHA256SUMS --ignore-missing
             ```
+
+            One static binary, no runtime dependency. Drills need Docker with
+            the Compose v2 plugin on the machine that runs them.

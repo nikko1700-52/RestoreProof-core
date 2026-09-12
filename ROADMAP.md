@@ -24,7 +24,8 @@ Shipped:
 
 Remaining before 0.1 is "done":
 
-* [ ] a recorded terminal session for the README
+* [x] a recorded terminal session for the README — `docs/demo.svg`, generated
+      from real output of the passing and the deliberately broken example
 * [ ] end-to-end CI coverage of the restic example (CI does not install restic
       today, so `examples/postgres-restic` is untested by automation)
 * [ ] verifying the tool on a non-Linux platform, or saying clearly that it is
