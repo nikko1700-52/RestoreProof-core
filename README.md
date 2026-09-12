@@ -195,6 +195,7 @@ unchanged. See [docs/architecture.md](docs/architecture.md).
 * [Security](docs/security.md)
 * [Architecture](docs/architecture.md)
 * [Troubleshooting](docs/troubleshooting.md)
+* [Explaining it to a non-technical client](docs/client-explainer.fr.html) — French, no jargon
 
 ## Exit codes
 

@@ -202,6 +202,7 @@ La documentation détaillée est en anglais.
 * [Sécurité](docs/security.md)
 * [Architecture](docs/architecture.md)
 * [Dépannage](docs/troubleshooting.md)
+* [Expliquer l'outil à un client non technique](docs/client-explainer.fr.html) — sans jargon
 
 ## Codes de sortie
 

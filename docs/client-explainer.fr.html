@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RestoreProof</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F5F8;
+    --surface:#FFFFFF;
+    --ink:#161B24;
+    --ink-dim:#4B5768;
+    --ink-faint:#8792A3;
+    --line:#D8DEE7;
+    --line-soft:#E6EAF0;
+    --accent:#4653C4;
+    --accent-ink:#3541A0;
+    --accent-soft:#E7E9FA;
+    --good:#1F8A54;
+    --good-soft:#E4F4EB;
+    --warn:#B5481F;
+    --warn-soft:#F8E9E2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#11141C;
+      --surface:#171B26;
+      --ink:#E8EAF2;
+      --ink-dim:#9BA3B7;
+      --ink-faint:#616B80;
+      --line:#2A3040;
+      --line-soft:#232837;
+      --accent:#8B95F0;
+      --accent-ink:#AEB6F5;
+      --accent-soft:#232A4A;
+      --good:#57C98A;
+      --good-soft:#16281F;
+      --warn:#E2795A;
+      --warn-soft:#2E1F1A;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#11141C;
+    --surface:#171B26;
+    --ink:#E8EAF2;
+    --ink-dim:#9BA3B7;
+    --ink-faint:#616B80;
+    --line:#2A3040;
+    --line-soft:#232837;
+    --accent:#8B95F0;
+    --accent-ink:#AEB6F5;
+    --accent-soft:#232A4A;
+    --good:#57C98A;
+    --good-soft:#16281F;
+    --warn:#E2795A;
+    --warn-soft:#2E1F1A;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    line-height:1.6;
+    padding-inline:20px;
+    padding-block:56px 88px;
+  }
+  h1,h2,h3{
+    font-family:"Fraunces", Georgia, serif;
+    font-weight:600;
+    text-wrap:balance;
+    color:var(--ink);
+    margin:0;
+  }
+  a{color:var(--accent-ink);}
+  code, .mono{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  .page{
+    max-width:740px;
+    margin-inline:auto;
+    display:flex;
+    flex-direction:column;
+    gap:64px;
+  }
+
+  /* ---------- header ---------- */
+  .masthead{ display:flex; flex-direction:column; gap:18px; }
+  .kicker{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.72rem;
+    font-weight:500;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent-ink);
+  }
+  .masthead h1{
+    font-size:clamp(2.4rem, 5.5vw, 3.4rem);
+    letter-spacing:-0.01em;
+  }
+  .thesis{
+    font-size:1.15rem;
+    color:var(--ink-dim);
+    max-width:56ch;
+    font-weight:400;
+  }
+  .thesis strong{ color:var(--ink); font-weight:600; }
+
+  /* ---------- generic section rhythm ---------- */
+  section{ display:flex; flex-direction:column; gap:18px; }
+  section > h2{
+    font-size:1.55rem;
+    letter-spacing:-0.005em;
+  }
+  .lede{
+    font-size:1.02rem;
+    color:var(--ink-dim);
+    max-width:64ch;
+  }
+  p{ margin:0; max-width:66ch; }
+  p + p{ margin-top:12px; }
+
+  /* ---------- the analogy strip ---------- */
+  .analogy{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .analogy > div{
+    background:var(--surface);
+    padding:20px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .analogy .tag{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.68rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .analogy p{ font-size:0.93rem; color:var(--ink-dim); max-width:none; }
+  @media (max-width:640px){ .analogy{ grid-template-columns:1fr; } }
+
+  /* ---------- scenario callout ---------- */
+  .scenario{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    border-radius:0 10px 10px 0;
+    padding:22px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .scenario .tag{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.68rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--accent-ink);
+  }
+  .scenario p{ color:var(--ink-dim); max-width:none; }
+  .scenario p strong{ color:var(--ink); }
+
+  /* ---------- two-panel product comparison ---------- */
+  .panels{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:680px){ .panels{ grid-template-columns:1fr; } }
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .panel-head{ display:flex; flex-direction:column; gap:6px; }
+  .badge{
+    align-self:flex-start;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.66rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    padding:4px 9px;
+    border-radius:999px;
+    font-weight:600;
+  }
+  .badge.open{ background:var(--good-soft); color:var(--good); }
+  .badge.pro{ background:var(--accent-soft); color:var(--accent-ink); }
+  .panel h3{
+    font-size:1.28rem;
+  }
+  .panel .sub{ font-size:0.9rem; color:var(--ink-faint); }
+  .panel ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:11px; }
+  .panel li{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    font-size:0.93rem;
+    color:var(--ink-dim);
+  }
+  .panel li svg{ flex:none; margin-top:3px; }
+  .panel li b{ color:var(--ink); font-weight:600; }
+  .panel .foot{
+    margin-top:auto;
+    padding-top:14px;
+    border-top:1px solid var(--line-soft);
+    font-size:0.85rem;
+    color:var(--ink-faint);
+    font-family:"IBM Plex Mono", monospace;
+  }
+
+  /* ---------- flow diagram ---------- */
+  .flow-wrap{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px;
+    overflow-x:auto;
+  }
+  .flow-wrap svg{ display:block; margin-inline:auto; max-width:100%; height:auto; }
+  .flow-caption{
+    font-size:0.85rem;
+    color:var(--ink-faint);
+    text-align:center;
+    margin-top:2px;
+  }
+
+  /* ---------- steps ---------- */
+  .steps{ display:flex; flex-direction:column; gap:0; }
+  .step{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:16px;
+    padding-block:16px;
+    border-top:1px solid var(--line-soft);
+  }
+  .step:first-child{ border-top:none; }
+  .step .n{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.85rem;
+    color:var(--accent-ink);
+    font-weight:600;
+    padding-top:2px;
+  }
+  .step h4{
+    font-family:"Public Sans", sans-serif;
+    font-size:1rem;
+    font-weight:600;
+    margin:0 0 4px 0;
+    color:var(--ink);
+  }
+  .step p{ color:var(--ink-dim); font-size:0.93rem; max-width:none; }
+
+  /* ---------- verdict box ---------- */
+  .verdict{
+    background:var(--surface);
+    border:1px solid var(--accent);
+    border-radius:14px;
+    padding:28px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    position:relative;
+  }
+  .verdict .kicker{ color:var(--accent-ink); }
+  .verdict h2{ font-size:1.5rem; }
+  .verdict p{ color:var(--ink-dim); max-width:none; }
+  .verdict .headline{
+    font-size:1.08rem;
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  /* ---------- honest limits ---------- */
+  .limits{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .limits ul{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:9px;}
+  .limits li{
+    display:flex; gap:9px; font-size:0.92rem; color:var(--ink-dim);
+    padding-block:9px; border-top:1px solid var(--line-soft);
+  }
+  .limits li:first-child{ border-top:none; }
+  .limits li svg{ flex:none; margin-top:3px; }
+
+  /* ---------- comparison chips used inline ---------- */
+  .pill{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:0.78rem;
+    background:var(--accent-soft);
+    color:var(--accent-ink);
+    padding:1px 7px;
+    border-radius:5px;
+  }
+
+  footer{
+    font-size:0.82rem;
+    color:var(--ink-faint);
+    border-top:1px solid var(--line);
+    padding-top:20px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+</style>
+
+
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="kicker">Note d'explication — à l'intention d'un client non technique</div>
+    <h1>RestoreProof</h1>
+    <p class="thesis">Un outil qui ne sauvegarde rien. Il fait une seule chose : <strong>prouver, avec des faits, qu'une sauvegarde permet vraiment de relancer l'application</strong> — pas seulement qu'un fichier a été écrit quelque part.</p>
+  </header>
+
+  <section>
+    <h2>Le problème, en une image</h2>
+    <p class="lede">Presque tous les logiciels de sauvegarde répondent à une seule question : « le job de sauvegarde a-t-il terminé sans erreur ? ». Ils ne répondent jamais à la question qui compte le jour où tout s'arrête : « est-ce que ça redémarre vraiment, et avec les bonnes données ? »</p>
+    <div class="analogy">
+      <div>
+        <span class="tag">Ce qu'on croit avoir</span>
+        <p>Un extincteur accroché au mur. Personne ne l'a testé, mais il est là, donc on suppose qu'il fonctionnera.</p>
+      </div>
+      <div>
+        <span class="tag">Ce qu'on découvre trop tard</span>
+        <p>Le jour de l'incendie, la valve est bloquée. Le job de sauvegarde, lui, avait toujours affiché « succès ».</p>
+      </div>
+      <div>
+        <span class="tag">Ce que fait l'outil</span>
+        <p>Il déclenche l'incendie <em>pour de faux</em>, régulièrement, dans une pièce fermée — pour vérifier que l'extincteur marche vraiment, avant le vrai incendie.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Deux produits, un seul principe</h2>
+    <p class="lede">Il y a en réalité deux logiciels distincts, qui se complètent. Le premier est gratuit et fait tout le travail technique. Le second est payant et sert à piloter le premier à grande échelle, pour une organisation.</p>
+
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="badge open">Gratuit · Code ouvert</span>
+          <h3>RestoreProof Core</h3>
+          <span class="sub">L'outil qui fait réellement l'exercice</span>
+        </div>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--good)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Prend une sauvegarde existante et la restaure pour de vrai, dans un environnement isolé et jetable — jamais sur les systèmes réels.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--good)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Redémarre l'application à partir de cette copie et vérifie qu'elle répond, que la base de données contient bien les bonnes lignes, que les fichiers attendus sont là.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--good)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Chronomètre l'opération et donne deux chiffres que toute direction informatique connaît : <b>combien de temps</b> pour revenir en ligne, et <b>combien de données récentes</b> seraient perdues.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--good)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Produit un rapport daté et vérifiable, à montrer à un auditeur, un assureur ou une direction — pas une simple case cochée.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--good)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Nettoie systématiquement derrière lui, même si on l'interrompt en cours de route — il ne laisse jamais de copie de données oubliée quelque part.</span></li>
+        </ul>
+        <div class="foot">Pensé pour une équipe, un serveur, un exercice à la fois.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="badge pro">Payant · Entreprise</span>
+          <h3>RestoreProof Premium</h3>
+          <span class="sub">Le tableau de bord qui pilote tout ça</span>
+        </div>
+        <ul>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Centralise les résultats de <b>tous les systèmes, de toutes les équipes</b> en une seule vue : quoi a été testé, quand, avec quel résultat.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Signale tout seul un système qu'on a <b>oublié de tester</b> depuis trop longtemps — le silence est traité comme une alerte, pas comme une bonne nouvelle.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sépare strictement les clients ou les équipes entre eux : l'un ne peut techniquement pas voir les données de l'autre.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Garde une trace de qui a fait quoi et qui a consulté quoi — utile pour un audit interne ou une conformité réglementaire.</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 8.2l2.3 2.3 4.7-5" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Même en cas d'abonnement expiré, on garde le droit de <b>récupérer tout son historique</b> — rien n'est retenu en otage.</span></li>
+        </ul>
+        <div class="foot">Pensé pour une direction qui doit répondre de plusieurs équipes ou clients.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Comment les deux s'articulent</h2>
+    <p class="lede">Premium ne remplace jamais Core : il l'installe sur chaque système à surveiller, puis récupère seulement les <em>résultats</em> — jamais les données elles-mêmes.</p>
+    <div class="flow-wrap">
+      <svg viewBox="0 0 640 190" width="640" height="190" role="img" aria-label="Schéma : la machine du client exécute l'exercice et envoie uniquement le rapport vers le tableau de bord central, sans jamais envoyer la sauvegarde ni les données restaurées.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/>
+          </marker>
+        </defs>
+        <style>
+          .box{ fill:var(--surface); stroke:var(--line); stroke-width:1.3; }
+          .lbl{ font-family:"Public Sans", sans-serif; font-size:13px; fill:var(--ink); font-weight:600; }
+          .sub{ font-family:"IBM Plex Mono", monospace; font-size:10.5px; fill:var(--ink-faint); }
+          .cap{ font-family:"IBM Plex Mono", monospace; font-size:10px; fill:var(--accent-ink); letter-spacing:.02em; }
+          .stay{ font-family:"Public Sans", sans-serif; font-size:10.5px; fill:var(--warn); }
+        </style>
+
+        <!-- left box: client machine -->
+        <rect x="16" y="30" width="230" height="130" rx="10" class="box"/>
+        <text x="34" y="56" class="lbl">Machine du client</text>
+        <text x="34" y="74" class="sub">RestoreProof Core</text>
+        <text x="34" y="92" class="sub">l'exercice a lieu ici</text>
+        <line x1="34" y1="104" x2="222" y2="104" stroke="var(--line-soft)"/>
+        <text x="34" y="124" class="stay">reste sur place :</text>
+        <text x="34" y="140" class="sub">sauvegarde + données</text>
+        <text x="34" y="154" class="sub">restaurées, jamais envoyées</text>
+
+        <!-- arrow -->
+        <line x1="252" y1="95" x2="368" y2="95" stroke="var(--accent)" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="256" y="82" class="cap">rapport seulement</text>
+        <text x="278" y="112" class="sub">(connexion sortante)</text>
+
+        <!-- right box: control plane -->
+        <rect x="374" y="30" width="250" height="130" rx="10" class="box"/>
+        <text x="392" y="56" class="lbl">Tableau de bord central</text>
+        <text x="392" y="74" class="sub">RestoreProof Premium</text>
+        <line x1="392" y1="86" x2="600" y2="86" stroke="var(--line-soft)"/>
+        <text x="392" y="105" class="sub">historique · alertes de silence</text>
+        <text x="392" y="121" class="sub">séparation par client</text>
+        <text x="392" y="137" class="sub">qui a fait / vu quoi</text>
+      </svg>
+    </div>
+    <p class="flow-caption">La machine se connecte vers l'extérieur pour envoyer son rapport ; le tableau de bord n'ouvre jamais de porte vers le réseau du client.</p>
+  </section>
+
+  <section>
+    <h2>Un exemple concret</h2>
+    <div class="scenario">
+      <span class="tag">Scénario illustratif</span>
+      <p>Une entreprise sauvegarde chaque nuit la base de données qui gère la facturation de ses 200 clients. Le job de sauvegarde affiche « succès » depuis huit mois. Personne ne l'a jamais remis en question.</p>
+      <p>Avec <b>RestoreProof Core</b>, un exercice automatique restaure cette sauvegarde dans une copie isolée, relance l'application de facturation dessus, et vérifie qu'une facture précise du mois dernier est bien présente. La première fois, l'exercice <strong>échoue</strong> : une table avait été oubliée dans le périmètre de sauvegarde. Le problème est corrigé avant qu'un vrai incident ne le révèle.</p>
+      <p>Avec <b>RestoreProof Premium</b>, la direction informatique voit d'un coup d'œil que ce système — et les 40 autres qu'elle gère pour différents clients — sont bien testés cette semaine, combien de temps prendrait chaque reprise, et lequel n'a plus été testé depuis trop longtemps.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Est-ce vraiment utile ? Est-ce que ça existe déjà ?</h2>
+    <p class="lede">Deux questions différentes méritent deux réponses honnêtes.</p>
+
+    <div class="steps">
+      <div class="step">
+        <span class="n">01</span>
+        <div>
+          <h4>Le besoin lui-même : oui, sans ambiguïté</h4>
+          <p>« Une sauvegarde qui n'a jamais été restaurée n'est pas une sauvegarde, c'est un espoir » est un principe ancien et largement partagé dans les métiers de l'informatique. Le constat qu'un job de sauvegarde « vert » ne garantit rien sur la capacité réelle à repartir est une des causes récurrentes d'incidents graves — découverte, presque toujours, au pire moment possible : pendant l'incident lui-même.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="n">02</span>
+        <div>
+          <h4>L'idée n'est pas inédite — l'indépendance, elle, l'est</h4>
+          <p>De grands éditeurs de sauvegarde proposent déjà une fonctionnalité de ce genre, intégrée à leur propre produit (par exemple la fonction « SureBackup » de Veeam, qui redémarre une sauvegarde pour la tester). Ce que fait différemment cet outil : il n'appartient à aucun éditeur de sauvegarde et fonctionne avec n'importe laquelle — local, restic, borg — plutôt que d'enfermer le client chez un seul fournisseur.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="n">03</span>
+        <div>
+          <h4>Ce qui est vérifiable aujourd'hui</h4>
+          <p>Le moteur gratuit est testé sérieusement (près de 300 vérifications automatiques, y compris des scénarios volontairement mis en échec pour confirmer qu'il les détecte bien), et sa conception refuse par défaut tout ce qui pourrait transformer un exercice de test en incident réel — pas de commande arbitraire, pas de modification de données, pas de port ouvert sans qu'on le demande explicitement.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="n">04</span>
+        <div>
+          <h4>Ce qui n'est pas encore démontré</h4>
+          <p>Honnêtement : ce n'est pas (encore) un produit qui a fait ses preuves commercialement. La partie payante n'a, à ce jour, aucun client réel derrière elle — c'est un logiciel fini et testé, pas encore un succès de marché prouvé. La rigueur technique est réelle ; la demande commerciale reste, elle, à démontrer sur le terrain.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce qu'il ne fait pas (encore)</h2>
+    <p class="lede">Pour ne rien vendre au-delà de ce qui existe réellement aujourd'hui :</p>
+    <div class="limits">
+      <ul>
+        <li><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:2px"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--warn)" stroke-width="1.4"/><path d="M8 4.5v4.3M8 11.2h.01" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round"/></svg><span>Pas de planification automatique centralisée pour l'instant : il faut brancher l'outil sur une tâche planifiée existante (cron, CI…) plutôt que de tout piloter depuis le tableau de bord.</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:2px"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--warn)" stroke-width="1.4"/><path d="M8 4.5v4.3M8 11.2h.01" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round"/></svg><span>Pas de certificat PDF signé électroniquement — les rapports sont infalsifiables techniquement (une empreinte numérique le prouve), mais pas encore signés au sens juridique du terme.</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:2px"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--warn)" stroke-width="1.4"/><path d="M8 4.5v4.3M8 11.2h.01" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round"/></svg><span>Ne couvre pas (encore) Kubernetes, VMware ou les sauvegardes cloud gérées (AWS, Azure, Google) — seulement Docker et les sauvegardes classiques.</span></li>
+        <li><svg width="15" height="15" viewBox="0 0 16 16" style="margin-top:2px"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--warn)" stroke-width="1.4"/><path d="M8 4.5v4.3M8 11.2h.01" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round"/></svg><span>Pas de connexion unique (SSO) ni de masquage automatique des données personnelles dans les environnements de test, pour l'instant.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <span class="kicker">En une phrase</span>
+    <p class="headline">Le problème qu'il résout est réel et bien identifié depuis longtemps dans le métier ; l'outil qui le résout est construit avec sérieux et déjà utilisable ; ce qui manque encore, ce n'est pas la technique, c'est la preuve que des clients paieront pour ça.</p>
+    <p>Autrement dit : à recommander pour ce qu'il fait réellement aujourd'hui (des exercices de reprise fiables et vérifiables), pas encore comme un produit commercial installé sur le marché.</p>
+  </div>
+
+  <footer>
+    <span>RestoreProof Core <span class="pill">Apache-2.0</span> — RestoreProof Premium <span class="pill">privé</span></span>
+    <span>Document explicatif — non technique</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
