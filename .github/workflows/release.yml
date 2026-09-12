@@ -14,6 +14,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Both entry points end up here: a pushed tag names itself, a manual run says
+  # which tag it is building. Reading `github.ref_name` alone meant a manual run
+  # silently built a release called `main`.
+  VERSION: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -43,7 +47,7 @@ jobs:
           # unpacked. The asset does not: a fixed name is what makes the
           # `releases/latest/download/...` URL in the README work at every
           # release instead of rotting at the next one.
-          inner="restoreproof-${{ github.ref_name }}-${{ matrix.target }}"
+          inner="restoreproof-${VERSION}-${{ matrix.target }}"
           asset="restoreproof-${{ matrix.target }}"
           mkdir -p "dist/$inner"
           cp "target/${{ matrix.target }}/release/restoreproof" "dist/$inner/"
@@ -66,6 +70,14 @@ jobs:
         with:
           path: artifacts
 
+      - name: Refuse to publish anything that is not a version
+        run: |
+          case "$VERSION" in
+            v[0-9]*.[0-9]*.[0-9]*) echo "publishing $VERSION" ;;
+            *) echo "::error::refusing to publish \`$VERSION\`: a release is \
+               named vMAJOR.MINOR.PATCH"; exit 1 ;;
+          esac
+
       - name: Collect checksums
         run: |
           mkdir -p dist
@@ -75,6 +87,11 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          # Named explicitly rather than inferred from the ref, so a manual run
+          # publishes the tag it was asked for — creating it if it does not
+          # exist yet — instead of whatever branch it happened to run on.
+          tag_name: ${{ env.VERSION }}
+          name: RestoreProof Core ${{ env.VERSION }}
           files: |
             dist/*.tar.gz
             dist/SHA256SUMS
