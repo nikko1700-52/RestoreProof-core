@@ -269,9 +269,11 @@ cargo test --workspace
 
 [Apache-2.0](LICENSE).
 
-Une édition commerciale est prévue pour ce qui a été délibérément laissé de côté
-ici — planification centralisée, historique multi-client, rapports signés,
-environnements Kubernetes et hyperviseurs. Ce qui relève de son périmètre, et
+Une édition commerciale est en cours de construction, séparément et en privé,
+pour ce qui a été délibérément laissé de côté ici — planification centralisée,
+historique multi-client, rapports signés, environnements Kubernetes et
+hyperviseurs. Elle dépend de ces crates telles que publiées ; elle ne les
+duplique pas, et rien ne sort d'ici pour lui faire de la place. Ce qui relève de son périmètre, et
 pourquoi, est écrit dans [PREMIUM.md](PREMIUM.md). Rien dans ce dépôt n'est
 limité dans le temps, verrouillé par fonctionnalité ou connecté à un serveur
 distant, et rien ici ne le deviendra.

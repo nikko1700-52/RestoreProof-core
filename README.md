@@ -250,8 +250,10 @@ cargo test --workspace
 
 [Apache-2.0](LICENSE).
 
-A commercial edition is planned for the things deliberately left out of this
-one — central scheduling, multi-tenant history, signed reports, Kubernetes and
-hypervisor environments. What is in scope for it, and why, is written down in
+A commercial edition is being built, separately and privately, for the things
+deliberately left out of this one — central scheduling, multi-tenant history,
+signed reports, Kubernetes and hypervisor environments. It depends on these
+crates as published; it does not fork them, and nothing moves out of here to
+make room for it. What is in scope for it, and why, is written down in
 [PREMIUM.md](PREMIUM.md). Nothing in this repository is time-limited, feature-
 gated or phoning home, and nothing here will start doing so.

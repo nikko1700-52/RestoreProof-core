@@ -140,10 +140,22 @@ Practically, that means:
 
 ## Status
 
-The commercial edition does **not exist yet**. Nothing here is for sale, and
-none of the features above are implemented anywhere. This file is a statement of
-intent so that contributors know what is in scope for the open-source project
-and what is not — not a product announcement.
+**Nothing here is for sale, and none of the features above are implemented in
+this repository.** That second half is the part that affects you, and it is not
+a promise in prose: `open_source_guarantees` fails the build if commercial
+machinery ever appears in this code.
+
+Work on a commercial edition has started, in a separate private repository: a
+control plane that stores drill reports, shows them per system, keeps
+organisations apart and records an audit trail. It is early and it is not for
+sale. It changes nothing here — it depends on these crates exactly as published,
+never a fork or a patch, and if it were abandoned tomorrow everything in this
+repository would keep working unchanged.
+
+Most of the list above is not built anywhere yet: no central scheduling, no
+Kubernetes or hypervisor environments, no signed PDFs, no SSO, no data masking.
+This file remains a statement of scope for contributors, not a product
+announcement.
 
 If a feature you need is on the commercial list and you would rather it were
 open source, say so in an issue. The list is a plan, not a promise to keep

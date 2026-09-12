@@ -165,17 +165,25 @@ fn no_crate_depends_on_a_commercial_crate() {
 }
 
 #[test]
-fn premium_features_are_described_as_absent_not_shipped() {
+fn premium_features_are_described_as_absent_from_this_repository() {
     let premium = std::fs::read_to_string(workspace_root().join("PREMIUM.md"))
         .expect("PREMIUM.md must exist: the boundary has to be written down somewhere");
-    // Emphasis markers are presentation, not content.
+    // Emphasis markers and line wrapping are presentation, not content: a
+    // promise must not be able to disappear because someone reflowed a
+    // paragraph, and must not survive because they did.
     let premium = premium.replace(['*', '_'], "");
+    let premium = premium.split_whitespace().collect::<Vec<_>>().join(" ");
 
-    for expected in ["no licence check", "no telemetry", "does not exist yet"] {
+    for expected in [
+        "no licence check",
+        "no telemetry",
+        "implemented in this repository",
+    ] {
         assert!(
             premium.contains(expected),
-            "PREMIUM.md no longer states `{expected}`. If the commercial edition now exists, \
-             say so honestly — but the open-source promises must stay stated."
+            "PREMIUM.md no longer states `{expected}`.\n\
+             Whether the commercial edition exists may change; that none of it is in this \
+             repository may not, and PREMIUM.md has to keep saying so."
         );
     }
 }
